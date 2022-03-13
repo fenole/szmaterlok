@@ -4,9 +4,17 @@
     <meta charset="UTF-8">
     <title>szmaterlok</title>
     <link rel="stylesheet" type="text/css" href="assets/css/picnic.min.css"/>
-    <script defer src="assets/js/index.js"></script>
+    <script src="assets/js/index.js"></script>
+    <script defer src="assets/js/alpine.min.js"></script>
   </head>
   <body>
     <h1>Hello World!</h1>
+    <div x-data="eventCounter">
+      <p @sse:test.document="handleMessage($event)">
+        Unix epoch: <span x-text="lastEventSendAt"></span>
+        <span x-text="message"></span>
+        <span x-text="count"></span>.
+      </p>
+    </div>
   </body>
 </html>
