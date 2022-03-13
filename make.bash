@@ -37,7 +37,7 @@ function go:watch {
         # rerun szmaterlok executable
         if (( $max > $bin_last_updated )); then
             kill -INT $binpid
-            build
+            go:build
             ./$BIN_NAME &
             binpid=$!
             bin_last_updated=$(last_update ./$BIN_NAME)
