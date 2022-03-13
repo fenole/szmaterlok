@@ -57,6 +57,10 @@ function go:run {
     ./$BIN_NAME
 }
 
+function go:test {
+    go test -v ./...
+}
+
 function default {
     go:build
 }
