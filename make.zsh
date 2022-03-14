@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 BIN_NAME="szmaterlok"
 BIN_PATH="./cmd/szmaterlok"
@@ -14,6 +14,7 @@ function go:watch {
     binpid=$!
     bin_last_updated=$(last_update ./$BIN_NAME)
 
+    max=0
     while true; do
         # read all recursively files from current directory with
         # extensions that matter
@@ -26,11 +27,12 @@ function go:watch {
             -or -name '*.css') )
 
         # establish maximum last update time
-        max=$(last_update ${files[0]})
-        for t in "${files[@]}"; do
+        for t in $files; do
             last_updated=$(last_update $t)
 
-            (( last_updated > max )) && max=$last_updated
+            if (( $last_updated > $max )); then 
+                max=$last_updated
+            fi
         done
 
         # if maximum is greater than update time of binary
@@ -68,7 +70,7 @@ function default {
 function help {
     echo "$0 <task> <args>"
     echo "Tasks:"
-    compgen -A function | cat -n
+    print -l ${(ok)functions} | cat -n
 }
 
 TIMEFORMAT="Task completed in %3lR"
