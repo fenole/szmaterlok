@@ -8,7 +8,7 @@ function last_update {
     echo $(stat -t '%s' -f '%Sm' $1)
 }
 
-function go:watch {
+function go:watch { # watch for changes and rebuild go binaries
     go:build
     ./$BIN_NAME &
     binpid=$!
@@ -50,17 +50,39 @@ function go:watch {
     done
 }
 
-function go:build {
+function go:build { # build go binaries
     go build -o $BIN_NAME $BIN_PATH
 }
 
-function go:run {
+function go:run { # run go backend server
     go:build
     ./$BIN_NAME
 }
 
-function go:test {
+function go:test { # run go unit tests
     go test -v ./...
+}
+
+function go:clean { # remove go built binaries
+    rm -rf $BIN_NAME
+}
+
+function go:lint { # lint go files in repository
+    go build ./...
+    go vet ./...
+}
+
+function go:fmt { # format all go files in repository
+    go fmt ./...
+}
+
+function fmt { # format all files in repository
+    go:fmt
+    deno fmt
+}
+
+function clean { # remove all build artifacts
+    go:clean
 }
 
 function default {
