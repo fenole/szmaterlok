@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 BIN_NAME="szmaterlok"
-BIN_PATH="./cmd/szmaterlok"
+BIN_PATH="./cmd"
 WATCH_SLEEP=3
 
 function last_update {

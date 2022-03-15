@@ -14,7 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/fenole/szmaterlok/pkg/services/sse"
+	"github.com/fenole/szmaterlok/service/sse"
 	"github.com/fenole/szmaterlok/web"
 )
 
