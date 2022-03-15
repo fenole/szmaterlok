@@ -1,0 +1,21 @@
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 80px 0 0;
+}
+
+.scroll {
+  height: 400px;
+  overflow: auto;
+  text-align: justify;
+  padding: 20px;
+}
+
+.card .messages {
+  font-weight: initial;
+}
+
+.date {
+  margin-left: initial;
+  margin-right: 1em;
+}

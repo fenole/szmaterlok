@@ -2,19 +2,106 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>szmaterlok</title>
     <link rel="stylesheet" type="text/css" href="assets/css/picnic.min.css"/>
+    <link rel="stylesheet" type="text/css" href="assets/css/style.css"/>
     <script src="assets/js/index.js"></script>
     <script defer src="assets/js/alpine.min.js"></script>
   </head>
   <body>
-    <h1>Hello World!</h1>
-    <div x-data="eventCounter">
-      <p @sse:test.document="handleMessage($event)">
-        Unix epoch: <span x-text="lastEventSendAt"></span>
-        <span x-text="message"></span>
-        <span x-text="count"></span>.
-      </p>
-    </div>
+    <nav class="demo">
+      <a href="#" class="brand">
+        <h1>Szmaterlok</h1>
+      </a>
+      <input id="bmenub" type="checkbox" class="show">
+      <label for="bmenub" class="burger pseudo button">Menu</label>
+      <div class="menu">
+        <a href="#" class="button error icon-puzzle">Logout</a>
+      </div>
+    </nav>
+
+    <main>
+      <section class="flex five">
+
+        <aside class="full fifth-1000">
+          <h2>Users</h2>
+          <button class="pseudo">Annie</button>
+          <button class="pseudo">Eren</button>
+          <button class="pseudo">Mikasa</button>
+          <button class="pseudo">Armin</button>
+        </aside>
+
+        <article class="full four-fifth-1000">
+          <h2>Messages</h2>
+          <section class="card">
+            <header class="messages scroll">
+              <article class="card">
+                <header>
+                  <p>Annie</p>
+                  <a class="close">×</a>
+                </header>
+                <footer>
+                  <p><span class="label success date">21:37:01</span> How are you?</p>
+                </footer>
+              </article>
+              <article class="card">
+                <header>
+                  <p>Erwin</p>
+                  <a class="close">×</a>
+                </header>
+                <footer>
+                  <p><span class="label success date">21:37:01</span> Are you there?</p>
+                  <p><span class="label success date">21:37:01</span> Are you there?</p>
+                </footer>
+              </article>
+              <article class="card">
+                <header>
+                  <p>Mikasa</p>
+                  <a class="close">×</a>
+                </header>
+                <footer>
+                  <p><span class="label success date">21:37:01</span> Are you there?</p>
+                  <p><span class="label success date">21:37:01</span> Are you there?</p>
+                </footer>
+              </article>
+              <article class="card">
+                <header>
+                  <p>Armin</p>
+                  <a class="close">×</a>
+                </header>
+                <footer>
+                  <p><span class="label success date">21:37:01</span> Are you there?</p>
+                  <p><span class="label success date">21:37:01</span> Are you there?</p>
+                </footer>
+              </article>
+              <article class="card">
+                <header>
+                  <p>Mikasa</p>
+                  <a class="close">×</a>
+                </header>
+                <footer>
+                  <p><span class="label success date">21:37:01</span> Are you there?</p>
+                  <p><span class="label success date">21:37:01</span> Are you there?</p>
+                </footer>
+              </article>
+            </header>
+            <footer>
+              <textarea placeholder="Textarea"></textarea>
+              <button>Send</button>
+            </footer>
+          </section>
+          <div x-data="eventCounter">
+            <p @sse:test.document="handleMessage($event)">
+            Unix epoch: <span x-text="lastEventSendAt"></span>
+            <span x-text="message"></span>
+            <span x-text="count"></span>.
+            </p>
+          </div>
+        </article>
+      </section>
+
+    </main>
+
   </body>
 </html>
