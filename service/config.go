@@ -10,6 +10,7 @@ import (
 
 // Pathts of configuration files.
 const (
+
 	// ConfigSystemFile is the path for default system wide
 	// config file. It is the first config file loaded
 	// by the szmaterlok.
@@ -25,12 +26,16 @@ const (
 
 // Names of configuration environmental variables.
 const (
+
 	// ConfigAddressVarName is env variable for listening address.
 	ConfigAddressVarName = "S8K_ADDR"
 )
 
 // Default values for configuration variables.
 const (
+
+	// ConfigAddressDefaultVal is default value for address
+	// configuration variable.
 	ConfigAddressDefaultVal = "0.0.0.0:8080"
 )
 
