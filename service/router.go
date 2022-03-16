@@ -9,16 +9,20 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/sirupsen/logrus"
 
 	"github.com/fenole/szmaterlok/service/sse"
 	"github.com/fenole/szmaterlok/web"
 )
 
 // NewRouter returns new configured chi mux router.
-func NewRouter() *chi.Mux {
+func NewRouter(log *logrus.Logger) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RequestLogger(&LoggerLogFormatter{
+		Logger: log,
+	}))
 	r.Use(middleware.Recoverer)
 
 	r.With(sse.Headers).Get("/stream", func(w http.ResponseWriter, r *http.Request) {

@@ -12,6 +12,8 @@ import (
 )
 
 func run() error {
+	log := service.LoggerDefault()
+
 	if err := service.ConfigLoad(context.TODO()); err != nil {
 		return err
 	}
@@ -21,7 +23,7 @@ func run() error {
 		return err
 	}
 
-	r := service.NewRouter()
+	r := service.NewRouter(log)
 
 	c := make(chan os.Signal, 1)
 	errc := make(chan error, 1)
@@ -33,9 +35,10 @@ func run() error {
 		// TODO(thinkofher): Come back later to setup timeouts.
 	}
 
+	log.Println("Starting szmaterlok")
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		log.Printf("Listening at %s...", config.Address)
+		log.Printf("Listening at %s", config.Address)
 		if err := srv.ListenAndServe(); err != nil {
 			errc <- err
 		}
@@ -56,7 +59,7 @@ func run() error {
 		// Optionally, you could run srv.Shutdown in a goroutine and block on
 		// <-ctx.Done() if your application should wait for other services
 		// to finalize based on context cancellation.
-		log.Println("shutting down")
+		log.Println("Shutting down")
 		return nil
 	case err := <-errc:
 		return err
