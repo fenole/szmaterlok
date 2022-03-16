@@ -12,7 +12,14 @@ import (
 )
 
 func run() error {
+	if err := service.ConfigLoad(context.TODO()); err != nil {
+		return err
+	}
 
+	config := service.ConfigDefault()
+	if err := service.ConfigRead(&config); err != nil {
+		return err
+	}
 
 	r := service.NewRouter()
 
@@ -21,14 +28,14 @@ func run() error {
 
 	wait := time.Second * 15
 	srv := &http.Server{
-		Addr:    "0.0.0.0:8080",
+		Addr:    config.Address,
 		Handler: r,
 		// TODO(thinkofher): Come back later to setup timeouts.
 	}
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		log.Println("Listening at 0.0.0.0:8080...")
+		log.Printf("Listening at %s...", config.Address)
 		if err := srv.ListenAndServe(); err != nil {
 			errc <- err
 		}
