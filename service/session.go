@@ -2,10 +2,12 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"filippo.io/age"
@@ -113,4 +115,83 @@ func (st *SessionTokenizer) TokenDecode(token string) (*SessionState, error) {
 	}
 
 	return res, nil
+}
+
+// jsonResponse sends a JSON response with given status code.
+func jsonResponse(w http.ResponseWriter, code int, i interface{}) error {
+	b, err := json.Marshal(i)
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	w.Write(b)
+	return nil
+}
+
+type responseWrapper struct {
+	Data  interface{} `json:"data,omitempty"`
+	Error interface{} `json:"error,omitempty"`
+	Debug interface{} `json:"debug,omitempty"`
+}
+
+type errorResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// SessionAuthHeader is key for szmaterlok session authentication header.
+const SessionAuthHeader = "S8K-Auth"
+
+// SessionRequired is http middleware which checks for presence of session
+// state in current request. It return  request without auth header set
+// or with invalid value of session token.
+//
+// If token is present, SessionRequired saves given token within request
+// context. It can be retrieved with SessionContextState function.
+func SessionRequired(t *SessionTokenizer) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token := r.Header.Get(SessionAuthHeader)
+			if token == "" {
+				jsonResponse(w, http.StatusUnauthorized, responseWrapper{
+					Error: errorResponse{
+						Code:    http.StatusUnauthorized,
+						Message: fmt.Sprintf("%s header is empty.", SessionAuthHeader),
+					},
+				})
+				return
+			}
+
+			state, err := t.TokenDecode(token)
+			if err != nil {
+				jsonResponse(w, http.StatusUnauthorized, responseWrapper{
+					Error: errorResponse{
+						Code:    http.StatusUnauthorized,
+						Message: "Invalid auth token.",
+					},
+				})
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), sessionStateKey, state)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+type sessionKey string
+
+const sessionStateKey sessionKey = "__session_state"
+
+// SessionContextState retrieves session state from context. It
+// returns nil context, if there is no session state saved within
+// context.
+func SessionContextState(ctx context.Context) *SessionState {
+	res, ok := ctx.Value(sessionStateKey).(*SessionState)
+	if !ok {
+		return nil
+	}
+	return res
 }
