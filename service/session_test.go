@@ -20,10 +20,10 @@ func TestSessionTokenizer(t *testing.T) {
 	is.NoErr(err)
 
 	wantState := SessionState{
-		Nickname:   "karol",
-		ID:         "uniqueid",
-		CreatedAt:  now,
-		ExpirateAt: now.Add(expirationTime),
+		Nickname:  "karol",
+		ID:        "uniqueid",
+		CreatedAt: now,
+		ExpireAt:  now.Add(expirationTime),
 	}
 
 	token, err := tokenizerA.TokenEncode(wantState)
