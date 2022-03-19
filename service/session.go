@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"filippo.io/age"
+	"github.com/google/uuid"
 )
 
 // SessionState is model for user sessions stored in
@@ -28,6 +29,16 @@ type SessionStateFactory struct {
 	ExpirationTime time.Duration
 	IDGenerator
 	Clock
+}
+
+// DefaultSessionStateFactory is default constructor for SessionStateFactory.
+func DefaultSessionStateFactory() *SessionStateFactory {
+	return &SessionStateFactory{
+		// Default session state is valid for one week.
+		ExpirationTime: time.Hour * 24 * 7,
+		IDGenerator:    IDGeneratorFunc(uuid.NewString),
+		Clock:          ClockFunc(time.Now),
+	}
 }
 
 // MakeState creates new unique session state for given nickname.
@@ -258,4 +269,15 @@ func (cs *SessionCookieStore) SaveSessionState(
 		HttpOnly: true,
 	})
 	return nil
+}
+
+// ClearState deletes current session state stored in http cookies.
+func (cs *SessionCookieStore) ClearState(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieKey,
+		Value:    "",
+		Path:     "/",
+		Expires:  cs.Now().Add(-1 * time.Second),
+		HttpOnly: true,
+	})
 }
