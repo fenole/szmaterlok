@@ -1,19 +1,23 @@
 {{ template "layout" }}
 
 {{ define "content" }}
-    <nav class="demo">
-      <a href="#" class="brand">
-        <h1>Szmaterlok</h1>
-      </a>
-      <input id="bmenub" type="checkbox" class="show">
-      <label for="bmenub" class="burger pseudo button">Menu</label>
-      <div class="menu">
-        <a href="https://github.com/fenole/szmaterlok" class="button pseudo">Source</a>
-        <a href="#" class="button error">Logout</a>
-      </div>
-    </nav>
+<nav class="demo">
+  <a href="#" class="brand">
+    <h1>Szmaterlok</h1>
+  </a>
+  <input id="bmenub" type="checkbox" class="show">
+  <label for="bmenub" class="burger pseudo button">Menu</label>
+  <div class="menu">
+    <a href="https://github.com/fenole/szmaterlok" class="button pseudo">Source</a>
+    <a href="#" class="button error">Logout</a>
+  </div>
+</nav>
 
-    <main>
-      <h2>Login Page</h2>
-    </main>
+<main>
+  <h2>Login</h2>
+  <form class="third" action="/login" method="POST" x-data="{nickname: ''}">
+    <input class="stack" name="nickname" placeholder="Nickname" x-model="nickname"/>
+    <button class="stack" disabled x-bind:disabled="nickname <= 0">Enter</button>
+  </form>
+</main>
 {{ end }}

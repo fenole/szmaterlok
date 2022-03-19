@@ -74,6 +74,12 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 	})
 
 	r.Get("/", HandlerIndex(web.UI))
+	r.Post("/login", HandlerLogin(HandlerLoginDependencies{
+		StateFactory: DefaultSessionStateFactory(),
+		Logger:       deps.Logger,
+		SessionStore: deps.SessionStore,
+	}))
+	r.Post("/logout", HandlerLogout(deps.SessionStore))
 	r.With(SessionRequired(deps.SessionStore)).Get("/chat", HandlerChat(web.UI))
 	r.Handle("/*", http.FileServer(http.FS(web.Assets)))
 
