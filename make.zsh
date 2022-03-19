@@ -4,45 +4,30 @@ BIN_NAME="szmaterlok"
 BIN_PATH="./cmd"
 WATCH_SLEEP=3
 
-function last_update {
-    echo $(stat -t '%s' -f '%Sm' $1)
-}
-
 function go:watch { # watch for changes and rebuild go binaries
     go:build
     ./$BIN_NAME &
     binpid=$!
-    bin_last_updated=$(last_update ./$BIN_NAME)
 
     max=0
     while true; do
-        # read all recursively files from current directory with
-        # extensions that matter
-        files=( $(find . -name '*.go' \
+        # find files newer than built binary
+        files=( $(find . -newer $BIN_NAME -and \( \
+            -name '*.go' \
             -or -name '*.mod' \
             -or -name '*.sum' \
             -or -name '*.json' \
             -or -name '*.js' \
             -or -name '*.html' \
-            -or -name '*.css') )
+            -or -name '*.css' \)) )
 
-        # establish maximum last update time
-        for t in $files; do
-            last_updated=$(last_update $t)
-
-            if (( $last_updated > $max )); then 
-                max=$last_updated
-            fi
-        done
-
-        # if maximum is greater than update time of binary
-        # rerun szmaterlok executable
-        if (( $max > $bin_last_updated )); then
+        # if there are any files newer than built binary
+        # rebuild and run szmaterlok executable again
+        if (( ${#files[@]} > 0 )); then
             kill -INT $binpid
             go:build
             ./$BIN_NAME &
             binpid=$!
-            bin_last_updated=$(last_update ./$BIN_NAME)
         fi
 
         # wait for next iteration
