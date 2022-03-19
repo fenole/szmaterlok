@@ -15,13 +15,20 @@ import (
 	"github.com/fenole/szmaterlok/web"
 )
 
+// RouterDependencies holds all configurated dependencies
+// for new http router.
+type RouterDependencies struct {
+	Logger       *logrus.Logger
+	SessionStore *SessionCookieStore
+}
+
 // NewRouter returns new configured chi mux router.
-func NewRouter(log *logrus.Logger) *chi.Mux {
+func NewRouter(deps RouterDependencies) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RequestLogger(&LoggerLogFormatter{
-		Logger: log,
+		Logger: deps.Logger,
 	}))
 	r.Use(middleware.Recoverer)
 
@@ -65,7 +72,9 @@ func NewRouter(log *logrus.Logger) *chi.Mux {
 			}
 		}
 	})
+
 	r.Handle("/", HandlerIndex(web.UI))
+	r.With(SessionRequired(deps.SessionStore)).Handle("/chat", HandlerChat(web.UI))
 	r.Handle("/*", http.FileServer(http.FS(web.Assets)))
 
 	return r

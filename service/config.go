@@ -29,6 +29,9 @@ const (
 
 	// ConfigAddressVarName is env variable for listening address.
 	ConfigAddressVarName = "S8K_ADDR"
+
+	// ConfigSessionSecretVarName is env variable for secret session password.
+	ConfigSessionSecretVarName = "S8K_SESSION_SECRET"
 )
 
 // Default values for configuration variables.
@@ -37,6 +40,11 @@ const (
 	// ConfigAddressDefaultVal is default value for address
 	// configuration variable.
 	ConfigAddressDefaultVal = "0.0.0.0:8080"
+
+	// ConfigSessionSecretDefaultVal is default value for session
+	// secret variable. Remember to change this value during
+	// production deployment of szmaterlok!
+	ConfigSessionSecretDefaultVal = "secret_password"
 )
 
 // ConfigVariables represents state read from environmental
@@ -45,6 +53,10 @@ type ConfigVariables struct {
 	// Address is combination of IP addres and port
 	// which is used for listening to TCP/IP connections.
 	Address string
+
+	// SessionSecret is secret password which is used to encrypt
+	// and decrypt session state data.
+	SessionSecret string
 }
 
 // ConfigLoad loads all the config files with environmental variables.
@@ -72,6 +84,10 @@ func ConfigDefault() ConfigVariables {
 func ConfigRead(c *ConfigVariables) error {
 	if addr := os.Getenv(ConfigAddressVarName); addr != "" {
 		c.Address = addr
+	}
+
+	if secret := os.Getenv(ConfigSessionSecretVarName); secret != "" {
+		c.SessionSecret = secret
 	}
 
 	return nil

@@ -205,11 +205,11 @@ var ErrSessionStateExpire = errors.New("session state expired")
 // SessionCookieStore handles save and read operation of session
 // state token within http cookies.
 type SessionCookieStore struct {
-	// ExpirationDate of http cookie. It can differ from session
+	// ExpirationTime of http cookie. It can differ from session
 	// state expiration date, but session state's one is more
 	// important. Valid cookie with expired session state will be
 	// invalid.
-	ExpirationDate time.Duration
+	ExpirationTime time.Duration
 
 	// Tokenizer handles encoding and decoding of session state.
 	Tokenizer *SessionTokenizer
@@ -254,7 +254,7 @@ func (cs *SessionCookieStore) SaveSessionState(
 		Name:     sessionCookieKey,
 		Value:    token,
 		Path:     "/",
-		Expires:  cs.Now().Add(cs.ExpirationDate),
+		Expires:  cs.Now().Add(cs.ExpirationTime),
 		HttpOnly: true,
 	})
 	return nil

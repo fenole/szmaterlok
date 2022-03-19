@@ -23,7 +23,19 @@ func run() error {
 		return err
 	}
 
-	r := service.NewRouter(log)
+	tokenizer, err := service.NewSessionTokenizer(config.SessionSecret)
+	if err != nil {
+		return err
+	}
+
+	r := service.NewRouter(service.RouterDependencies{
+		Logger: log,
+		SessionStore: &service.SessionCookieStore{
+			ExpirationTime: time.Hour * 24 * 7,
+			Tokenizer:      tokenizer,
+			Clock:          service.ClockFunc(time.Now),
+		},
+	})
 
 	c := make(chan os.Signal, 1)
 	errc := make(chan error, 1)
