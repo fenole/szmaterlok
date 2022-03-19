@@ -65,6 +65,7 @@ func NewRouter(log *logrus.Logger) *chi.Mux {
 			}
 		}
 	})
+	r.Handle("/", HandlerIndex(web.UI))
 	r.Handle("/*", http.FileServer(http.FS(web.Assets)))
 
 	return r

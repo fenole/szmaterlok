@@ -7,5 +7,10 @@ import "embed"
 // Assets is a filesystem with static files for szmaterlok
 // web server embedded into binary.
 //
-//go:embed assets index.html
+//go:embed assets
 var Assets embed.FS
+
+// UI is a filesystem with html templates.
+//
+//go:embed ui
+var UI embed.FS

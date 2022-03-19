@@ -1,15 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>szmaterlok</title>
-    <link rel="stylesheet" type="text/css" href="assets/css/picnic.min.css"/>
-    <link rel="stylesheet" type="text/css" href="assets/css/style.css"/>
-    <script src="assets/js/index.js"></script>
-    <script defer src="assets/js/alpine.min.js"></script>
-  </head>
-  <body>
+{{ template "layout.html" }}
+
+{{ define "content" }}
     <nav class="demo">
       <a href="#" class="brand">
         <h1>Szmaterlok</h1>
@@ -101,8 +92,5 @@
           </div>
         </article>
       </section>
-
     </main>
-
-  </body>
-</html>
+{{ end }}
