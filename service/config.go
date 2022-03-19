@@ -75,7 +75,8 @@ func ConfigLoad(ctx context.Context) error {
 // ConfigDefault returns default configuration for szmaterlok.
 func ConfigDefault() ConfigVariables {
 	return ConfigVariables{
-		Address: ConfigAddressDefaultVal,
+		Address:       ConfigAddressDefaultVal,
+		SessionSecret: ConfigSessionSecretDefaultVal,
 	}
 }
 
