@@ -12,7 +12,7 @@ func HandlerIndex(f fs.FS) http.HandlerFunc {
 	var tmpl *template.Template
 	once := &sync.Once{}
 
-	return func(w http.ResponseWriter, R *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		once.Do(func() {
 			tmpl = template.Must(template.ParseFS(f, "ui/layout.html", "ui/index.html"))
 		})
@@ -30,7 +30,7 @@ func HandlerChat(f fs.FS) http.HandlerFunc {
 	var tmpl *template.Template
 	once := &sync.Once{}
 
-	return func(w http.ResponseWriter, R *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		once.Do(func() {
 			tmpl = template.Must(template.ParseFS(f, "ui/layout.html", "ui/chat.html"))
 		})
