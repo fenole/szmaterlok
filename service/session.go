@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -44,6 +45,7 @@ func (ssf SessionStateFactory) MakeState(nickname string) SessionState {
 type SessionTokenizer struct {
 	recipient age.Recipient
 	identity  age.Identity
+	base64    *base64.Encoding
 }
 
 // NewSessionTokenizer returns SessionTokenizer which encrypts
@@ -63,6 +65,7 @@ func NewSessionTokenizer(secret string) (*SessionTokenizer, error) {
 	return &SessionTokenizer{
 		recipient: r,
 		identity:  i,
+		base64:    base64.URLEncoding,
 	}, nil
 }
 
@@ -85,13 +88,13 @@ func (st *SessionTokenizer) TokenEncode(state SessionState) (string, error) {
 		return "", fmt.Errorf("failed to encrypt session state: %w", err)
 	}
 
-	return base64.StdEncoding.EncodeToString(buff.Bytes()), nil
+	return st.base64.EncodeToString(buff.Bytes()), nil
 }
 
 // TokenDecode decodes given base64 encoded and encrypted token into
 // SessionState.
 func (st *SessionTokenizer) TokenDecode(token string) (*SessionState, error) {
-	b, err := base64.StdEncoding.DecodeString(token)
+	b, err := st.base64.DecodeString(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode token from base64: %w", err)
 	}
@@ -141,35 +144,21 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
-// SessionAuthHeader is key for szmaterlok session authentication header.
-const SessionAuthHeader = "S8K-Auth"
-
 // SessionRequired is http middleware which checks for presence of session
 // state in current request. It return  request without auth header set
 // or with invalid value of session token.
 //
 // If token is present, SessionRequired saves given token within request
 // context. It can be retrieved with SessionContextState function.
-func SessionRequired(t *SessionTokenizer) func(http.Handler) http.Handler {
+func SessionRequired(cs *SessionCookieStore) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token := r.Header.Get(SessionAuthHeader)
-			if token == "" {
-				jsonResponse(w, http.StatusUnauthorized, responseWrapper{
-					Error: errorResponse{
-						Code:    http.StatusUnauthorized,
-						Message: fmt.Sprintf("%s header is empty.", SessionAuthHeader),
-					},
-				})
-				return
-			}
-
-			state, err := t.TokenDecode(token)
+			state, err := cs.SessionState(r)
 			if err != nil {
 				jsonResponse(w, http.StatusUnauthorized, responseWrapper{
 					Error: errorResponse{
 						Code:    http.StatusUnauthorized,
-						Message: "Invalid auth token.",
+						Message: "You are not authorized to access these resources.",
 					},
 				})
 				return
@@ -194,4 +183,79 @@ func SessionContextState(ctx context.Context) *SessionState {
 		return nil
 	}
 	return res
+}
+
+const (
+	sessionCookieKey      = "SzmaterlokSession"
+	sessionExpirationDate = time.Hour * 24 * 7
+)
+
+// SessionCookieSetRequest contains dependencies and arguments
+// for saving session cookie.
+type SessionCookieSetRequest struct {
+	Writer    http.ResponseWriter
+	Request   *http.Request
+	Tokenizer *SessionTokenizer
+	State     SessionState
+	Clock
+}
+
+var ErrSessionStateExpire = errors.New("session state expired")
+
+// SessionCookieStore handles save and read operation of session
+// state token within http cookies.
+type SessionCookieStore struct {
+	// ExpirationDate of http cookie. It can differ from session
+	// state expiration date, but session state's one is more
+	// important. Valid cookie with expired session state will be
+	// invalid.
+	ExpirationDate time.Duration
+
+	// Tokenizer handles encoding and decoding of session state.
+	Tokenizer *SessionTokenizer
+
+	// Clock returns current time.
+	Clock
+}
+
+// SessionState returns current session state retrieved from http cookies.
+func (cs *SessionCookieStore) SessionState(r *http.Request) (*SessionState, error) {
+	c, err := r.Cookie(sessionCookieKey)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to retrieve with %s cookie from req: %w",
+			sessionCookieKey, err,
+		)
+	}
+
+	state, err := cs.Tokenizer.TokenDecode(c.Value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode cookie: %w", err)
+	}
+
+	if state.ExpireAt.Before(cs.Now()) {
+		return nil, ErrSessionStateExpire
+	}
+
+	return state, nil
+}
+
+// SaveSessionState overwrites szmaterlok session cookie with given
+// SessionState.
+func (cs *SessionCookieStore) SaveSessionState(
+	w http.ResponseWriter, s SessionState,
+) error {
+	token, err := cs.Tokenizer.TokenEncode(s)
+	if err != nil {
+		return fmt.Errorf("failed to tokenize state: %w", err)
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieKey,
+		Value:    token,
+		Path:     "/",
+		Expires:  cs.Now().Add(cs.ExpirationDate),
+		HttpOnly: true,
+	})
+	return nil
 }
