@@ -73,8 +73,8 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 		}
 	})
 
-	r.Handle("/", HandlerIndex(web.UI))
-	r.With(SessionRequired(deps.SessionStore)).Handle("/chat", HandlerChat(web.UI))
+	r.Get("/", HandlerIndex(web.UI))
+	r.With(SessionRequired(deps.SessionStore)).Get("/chat", HandlerChat(web.UI))
 	r.Handle("/*", http.FileServer(http.FS(web.Assets)))
 
 	return r
