@@ -11,7 +11,7 @@ import (
 	"github.com/fenole/szmaterlok/service"
 )
 
-func run() error {
+func run(ctx context.Context) error {
 	log := service.LoggerDefault()
 
 	if err := service.ConfigLoad(context.TODO()); err != nil {
@@ -36,6 +36,8 @@ func run() error {
 			Clock:          service.ClockFunc(time.Now),
 		},
 	})
+
+	bridge := service.NewBridge(ctx)
 
 	c := make(chan os.Signal, 1)
 	errc := make(chan error, 1)
@@ -63,11 +65,15 @@ func run() error {
 	// Block until we receive our signal or error from server.
 	select {
 	case <-c:
-		ctx, cancel := context.WithTimeout(context.Background(), wait)
+		ctx, cancel := context.WithTimeout(ctx, wait)
 		defer cancel()
 		// Doesn't block if no connections, but will otherwise wait
 		// until the timeout deadline.
 		srv.Shutdown(ctx)
+
+		// Wait for bridge to process its jobs.
+		bridge.Shutdown(ctx)
+
 		// Optionally, you could run srv.Shutdown in a goroutine and block on
 		// <-ctx.Done() if your application should wait for other services
 		// to finalize based on context cancellation.
@@ -79,7 +85,7 @@ func run() error {
 }
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(context.Background()); err != nil {
 		log.Fatal("szmaterlok:", err.Error())
 	}
 }
