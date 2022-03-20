@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/fenole/szmaterlok/service"
 )
 
@@ -28,6 +30,11 @@ func run(ctx context.Context) error {
 		return err
 	}
 
+	bridge := service.NewBridge(ctx)
+	messageHandler := service.NewBridgeMessageHandler(bridge, log)
+
+	bridge.Hook(service.BridgeMessageSent, messageHandler)
+
 	r := service.NewRouter(service.RouterDependencies{
 		Logger: log,
 		SessionStore: &service.SessionCookieStore{
@@ -35,9 +42,11 @@ func run(ctx context.Context) error {
 			Tokenizer:      tokenizer,
 			Clock:          service.ClockFunc(time.Now),
 		},
+		MessageSender:   messageHandler,
+		MessageNotifier: messageHandler,
+		IDGenerator:     service.IDGeneratorFunc(uuid.NewString),
+		Clock:           service.ClockFunc(time.Now),
 	})
-
-	bridge := service.NewBridge(ctx)
 
 	c := make(chan os.Signal, 1)
 	errc := make(chan error, 1)

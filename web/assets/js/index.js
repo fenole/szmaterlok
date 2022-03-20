@@ -1,5 +1,5 @@
 const eventStreamResource = "/stream";
-const sseTypes = ["test"];
+const sseTypes = ["message-sent"];
 
 function setupSSE() {
   let evtSource = new EventSource(eventStreamResource, {
