@@ -88,7 +88,7 @@
         </footer>
       </section>
       <div x-data="eventCounter">
-        <p @sse:test.document="handleMessage($event)">
+        <p @sse:message-sent.document="handleMessage($event)">
         Unix epoch: <span x-text="lastEventSendAt"></span>
         <span x-text="message"></span>
         <span x-text="count"></span>.

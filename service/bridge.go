@@ -2,7 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
+
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/sirupsen/logrus"
+
+	"github.com/fenole/szmaterlok/service/sse"
 )
 
 // BridgeEventType represents event name by which
@@ -16,6 +22,16 @@ const BridgeEventGlob BridgeEventType = "*"
 
 // BridgeHeaders store event store metadata.
 type BridgeHeaders map[string]string
+
+// Get returns value for given key. If there is no value
+// associated with given key, get returns empty string.
+func (h BridgeHeaders) Get(key string) string {
+	res, ok := h[key]
+	if !ok {
+		return ""
+	}
+	return res
+}
 
 // BridgeEvent is single event data model and commont
 // interface for all events.
@@ -169,4 +185,111 @@ func (b *Bridge) run(ctx context.Context) {
 
 	// Send signal to closer and indicate event loop has finished.
 	b.closer <- struct{}{}
+}
+
+// BridgeMessageSent is event type for message sent event.
+const BridgeMessageSent = BridgeEventType(MessageSent)
+
+type messageSubscriber struct {
+	id        string
+	requestID string
+}
+
+type BridgeMessageHandler struct {
+	bridge *Bridge
+	log    *logrus.Logger
+
+	channels map[messageSubscriber]chan<- sse.Event
+	mtx      *sync.RWMutex
+}
+
+func NewBridgeMessageHandler(b *Bridge, log *logrus.Logger) *BridgeMessageHandler {
+	return &BridgeMessageHandler{
+		bridge:   b,
+		log:      log,
+		channels: make(map[messageSubscriber]chan<- sse.Event),
+		mtx:      &sync.RWMutex{},
+	}
+}
+
+// Subscribe given ID for SSE events. Returns unsubscribe func.
+func (a *BridgeMessageHandler) Subscribe(ctx context.Context, req MessageSubscribeRequest) func() {
+	a.mtx.Lock()
+	defer a.mtx.Unlock()
+
+	key := messageSubscriber{
+		id:        req.ID,
+		requestID: req.RequestID,
+	}
+
+	log := a.log.WithFields(logrus.Fields{
+		"reqID": req.RequestID,
+		"subID": req.ID,
+	})
+
+	a.channels[key] = req.Channel
+	log.Info("Client has subscribed for bridge message handler.")
+
+	unsubscribe := func() {
+		a.mtx.Lock()
+		delete(a.channels, key)
+		a.mtx.Unlock()
+		log.Info("Client has unsubscribed from bridge message handler.")
+	}
+	return unsubscribe
+}
+
+const (
+	bridgeRequestIDHeaderVar   = "Request-ID"
+	bridgeContentTypeHeaderVar = "Content-Type"
+)
+
+// SendMessage sends event message to all subscribers. This
+// method is supposed to be blocking.
+func (a *BridgeMessageHandler) SendMessage(ctx context.Context, evt EventSentMessage) {
+	data, err := json.Marshal(evt)
+	if err != nil {
+		a.log.WithFields(logrus.Fields{
+			"eventID": evt.ID,
+			"reqID":   middleware.GetReqID(ctx),
+			"scope":   "BridgeMessageHandler.SendMessage",
+		}).Error("Failed to encode data as json.")
+		return
+	}
+
+	a.bridge.SendEvent(BridgeEvent{
+		ID:        evt.ID,
+		Name:      BridgeMessageSent,
+		CreatedAt: evt.SentAt.UnixMicro(),
+		Headers: BridgeHeaders{
+			bridgeContentTypeHeaderVar: "application/json; charset=utf-8",
+			bridgeRequestIDHeaderVar:   middleware.GetReqID(ctx),
+		},
+		Data: data,
+	})
+}
+
+// EventHook for message-sent event.
+func (a *BridgeMessageHandler) EventHook(_ context.Context, evt BridgeEvent) {
+	a.mtx.RLock()
+	defer a.mtx.RUnlock()
+
+	msg := &EventSentMessage{}
+	if err := json.Unmarshal(evt.Data, msg); err != nil {
+		a.log.WithFields(logrus.Fields{
+			"eventType": string(evt.Name),
+			"eventID":   evt.ID,
+			"reqID":     evt.Headers.Get(bridgeRequestIDHeaderVar),
+			"scope":     "BridgeMessageHandler.EventHook",
+		}).Error("Failed to parse json from event data blob.")
+		return
+	}
+
+	for _, c := range a.channels {
+		c <- sse.Event{
+			ID:   msg.ID,
+			Type: MessageSent,
+			Data: evt.Data,
+		}
+	}
 }

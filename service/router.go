@@ -1,11 +1,7 @@
 package service
 
 import (
-	"encoding/json"
-	"math/rand"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -20,6 +16,10 @@ import (
 type RouterDependencies struct {
 	Logger       *logrus.Logger
 	SessionStore *SessionCookieStore
+	MessageSender
+	MessageNotifier
+	IDGenerator
+	Clock
 }
 
 // NewRouter returns new configured chi mux router.
@@ -32,47 +32,6 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 	}))
 	r.Use(middleware.Recoverer)
 
-	r.With(sse.Headers).Get("/stream", func(w http.ResponseWriter, r *http.Request) {
-		type res struct {
-			Message string `json:"msg"`
-			Time    int64  `json:"sendAt"`
-		}
-
-		// Make sure that the writer supports flushing.
-		flusher, ok := w.(http.Flusher)
-
-		if !ok {
-			http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-			return
-		}
-
-		tick := time.Tick(time.Second * 2)
-
-		for {
-			select {
-			case <-tick:
-				eventData, err := json.Marshal(res{
-					Message: "hello world!",
-					Time:    time.Now().UnixNano(),
-				})
-
-				if err != nil {
-					return
-				}
-				sse.Encode(w, sse.Event{
-					Type: "test",
-					ID:   strconv.Itoa(rand.Int()),
-					Data: eventData,
-				})
-
-				// Flush the data immediatly instead of buffering it for later.
-				flusher.Flush()
-			case <-r.Context().Done():
-				return
-			}
-		}
-	})
-
 	r.Get("/", HandlerIndex(web.UI))
 	r.Post("/login", HandlerLogin(HandlerLoginDependencies{
 		StateFactory: DefaultSessionStateFactory(),
@@ -81,6 +40,12 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 	}))
 	r.Post("/logout", HandlerLogout(deps.SessionStore))
 	r.With(SessionRequired(deps.SessionStore)).Get("/chat", HandlerChat(web.UI))
+	r.With(SessionRequired(deps.SessionStore), sse.Headers).Get("/stream", HandlerStream(deps))
+	r.With(SessionRequired(deps.SessionStore)).Post("/message", HandlerSendMessage(HandlerSendMessageDependencies{
+		Sender:      deps,
+		IDGenerator: deps,
+		Clock:       deps,
+	}))
 	r.Handle("/*", http.FileServer(http.FS(web.Assets)))
 
 	return r

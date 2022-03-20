@@ -1,12 +1,18 @@
 package service
 
 import (
+	"context"
+	"encoding/json"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"sync"
+	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
+
+	"github.com/fenole/szmaterlok/service/sse"
 )
 
 // HandlerIndex renders main page of szmaterlok.
@@ -76,5 +82,167 @@ func HandlerLogout(cs *SessionCookieStore) http.HandlerFunc {
 		cs.ClearState(w)
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+}
+
+// MessageSent is SSE event type for message sent event.
+const MessageSent = "message-sent"
+
+// MessageAuthor is author of single message sent.
+type MessageAuthor struct {
+	ID       string `json:"id"`
+	Nickname string `json:"nickname"`
+}
+
+// EventSentMessage is model for event of single sent message
+// by client to all listeners.
+type EventSentMessage struct {
+	ID      string        `json:"id"`
+	From    MessageAuthor `json:"from"`
+	Content string        `json:"content"`
+	SentAt  time.Time     `json:"sentAt"`
+}
+
+// MessageSender sends clients event messages.
+type MessageSender interface {
+	// SendMessage sends event message to all subscribers. This
+	// method is supposed to be blocking.
+	SendMessage(ctx context.Context, evt EventSentMessage)
+}
+
+// MessageSubscribeRequest holds arguments for subscribe
+// method of MessageNotifier.
+type MessageSubscribeRequest struct {
+	// ID is chat (channel, user or any other chat entity) ID.
+	ID string
+
+	// RequestID is unique request ID. One client, with the same ID,
+	// can have multiple request IDs.
+	RequestID string
+
+	// Channel for sending SSE events.
+	Channel chan<- sse.Event
+}
+
+// MessageNotifier sends SSE events notifications to client.
+type MessageNotifier interface {
+	// Subscribe given ID for SSE events. Returns unsubscribe func.
+	Subscribe(ctx context.Context, args MessageSubscribeRequest) func()
+}
+
+// HandlerStream is SSE event stream handler, which sends event notifications
+// to clients. It requires authentication.
+//
+// See SessionRequired middleware.
+func HandlerStream(notifier MessageNotifier) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		state := SessionContextState(ctx)
+		if state == nil {
+			jsonResponse(w, http.StatusForbidden, responseWrapper{
+				Error: errorResponse{
+					Code:    http.StatusForbidden,
+					Message: "Event stream requires authentication.",
+				},
+			})
+			return
+		}
+
+		// Make sure that the writer supports flushing.
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+			return
+		}
+
+		evts := make(chan sse.Event)
+		unsubscribe := notifier.Subscribe(ctx, MessageSubscribeRequest{
+			ID:        state.ID,
+			RequestID: middleware.GetReqID(ctx),
+			Channel:   evts,
+		})
+		defer unsubscribe()
+
+		for {
+			select {
+			case evt := <-evts:
+				if err := sse.Encode(w, evt); err != nil {
+					jsonResponse(w, http.StatusInternalServerError, responseWrapper{
+						Error: errorResponse{
+							Code:    http.StatusInternalServerError,
+							Message: "Failed to encode event stream message.",
+						},
+					})
+					return
+				}
+
+				// Flush the data immediatly instead of buffering it for later.
+				flusher.Flush()
+			case <-r.Context().Done():
+				return
+			}
+		}
+	}
+}
+
+// HandlerLoginDependencies holds behavioral dependencies for
+// http handler for sending messages.
+type HandlerSendMessageDependencies struct {
+	Sender MessageSender
+	IDGenerator
+	Clock
+}
+
+// HandlerSendMessage handles sending message to all current listeners.
+func HandlerSendMessage(deps HandlerSendMessageDependencies) http.HandlerFunc {
+	type request struct {
+		Content string `json:"content"`
+	}
+	type response struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		state := SessionContextState(ctx)
+		if state == nil {
+			jsonResponse(w, http.StatusForbidden, responseWrapper{
+				Error: errorResponse{
+					Code:    http.StatusForbidden,
+					Message: "Sending messages requires authentication.",
+				},
+			})
+			return
+		}
+
+		req := &request{}
+
+		defer r.Body.Close()
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			jsonResponse(w, http.StatusBadRequest, responseWrapper{
+				Error: errorResponse{
+					Code:    http.StatusBadRequest,
+					Message: "Failed to parse body.",
+				},
+			})
+			return
+		}
+
+		messageID := deps.GenerateID()
+		go deps.Sender.SendMessage(ctx, EventSentMessage{
+			ID: messageID,
+			From: MessageAuthor{
+				ID:       state.ID,
+				Nickname: state.Nickname,
+			},
+			Content: req.Content,
+			SentAt:  deps.Now(),
+		})
+
+		jsonResponse(w, http.StatusAccepted, responseWrapper{
+			Data: response{
+				ID: messageID,
+			},
+		})
 	}
 }
