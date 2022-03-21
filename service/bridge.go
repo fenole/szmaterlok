@@ -195,6 +195,8 @@ type messageSubscriber struct {
 	requestID string
 }
 
+// BridgeMessageHandler handles sending, subscribing and
+// receiving of message-sent type events.
 type BridgeMessageHandler struct {
 	bridge *Bridge
 	log    *logrus.Logger
@@ -203,6 +205,8 @@ type BridgeMessageHandler struct {
 	mtx      *sync.RWMutex
 }
 
+// NewBridgeMessageHandler is default and safe constructor for
+// BridgeMessageHandler.
 func NewBridgeMessageHandler(b *Bridge, log *logrus.Logger) *BridgeMessageHandler {
 	return &BridgeMessageHandler{
 		bridge:   b,
