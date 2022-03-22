@@ -30,70 +30,27 @@
 
     <article class="full four-fifth-1000">
       <h2>Messages</h2>
-      <section class="card">
+      <section class="card"
+               x-data="messages"
+               @sse:message-sent.document="messages.push($event.detail.data)">
         <header class="messages scroll">
-          <article class="card">
-            <header>
-              <p>Annie</p>
-              <a class="close">×</a>
-            </header>
-            <footer>
-              <p><span class="label success date">21:37:01</span> How are you?</p>
-            </footer>
-          </article>
-          <article class="card">
-            <header>
-              <p>Erwin</p>
-              <a class="close">×</a>
-            </header>
-            <footer>
-              <p><span class="label success date">21:37:01</span> Are you there?</p>
-              <p><span class="label success date">21:37:01</span> Are you there?</p>
-            </footer>
-          </article>
-          <article class="card">
-            <header>
-              <p>Mikasa</p>
-              <a class="close">×</a>
-            </header>
-            <footer>
-              <p><span class="label success date">21:37:01</span> Are you there?</p>
-              <p><span class="label success date">21:37:01</span> Are you there?</p>
-            </footer>
-          </article>
-          <article class="card">
-            <header>
-              <p>Armin</p>
-              <a class="close">×</a>
-            </header>
-            <footer>
-              <p><span class="label success date">21:37:01</span> Are you there?</p>
-              <p><span class="label success date">21:37:01</span> Are you there?</p>
-            </footer>
-          </article>
-          <article class="card">
-            <header>
-              <p>Mikasa</p>
-              <a class="close">×</a>
-            </header>
-            <footer>
-              <p><span class="label success date">21:37:01</span> Are you there?</p>
-              <p><span class="label success date">21:37:01</span> Are you there?</p>
-            </footer>
-          </article>
+          <template x-for="msg in messages" :key="msg.id">
+            <article class="card">
+              <header>
+                <p x-text="msg.from.nickname"></p>
+                <a class="close">×</a>
+              </header>
+              <footer>
+                <p><span class="label success date" x-text="formatDate(msg.sentAt)"></span><span x-text="msg.content"></span></p>
+              </footer>
+            </article>
+          </template>
         </header>
-        <footer>
-          <textarea placeholder="Textarea"></textarea>
-          <button>Send</button>
+        <footer x-data="messageInput">
+          <textarea x-model="newMessage" placeholder="Enter your message..."></textarea>
+          <button @click="send">Send</button>
         </footer>
       </section>
-      <div x-data="eventCounter">
-        <p @sse:message-sent.document="handleMessage($event)">
-        Unix epoch: <span x-text="lastEventSendAt"></span>
-        <span x-text="message"></span>
-        <span x-text="count"></span>.
-        </p>
-      </div>
     </article>
   </section>
 </main>

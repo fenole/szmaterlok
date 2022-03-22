@@ -24,18 +24,31 @@ function setupSSE() {
   return evtSource;
 }
 
-document.addEventListener("alpine:init", () => {
-  Alpine.data("eventCounter", () => ({
-    count: 0,
-    message: "",
-    lastEventSendAt: 0,
+function sendMessage(msg) {
+  fetch("/message", {
+    method: "POST",
+    credentials: "include",
+    body: JSON.stringify({ content: msg }),
+  });
+}
 
-    handleMessage(event) {
-      this.message = event.detail.data.msg;
-      this.lastEventSendAt = event.detail.data.sendAt;
-      this.count++;
+document.addEventListener("alpine:init", () => {
+  setupSSE();
+
+  Alpine.data("messages", () => ({
+    messages: [],
+
+    formatDate(sentAt) {
+      return new Date(sentAt).toLocaleTimeString("en-gb", {});
     },
   }));
 
-  setupSSE();
+  Alpine.data("messageInput", () => ({
+    newMessage: "",
+
+    send() {
+      sendMessage(this.newMessage);
+      this.newMessage = "";
+    },
+  }));
 });
