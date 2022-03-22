@@ -1,15 +1,15 @@
 # API
 
 Documentation consists list of HTTP resources used for communication and SSE
-types and data scheme.
+types and data schemas.
 
 ## HTTP
 
-All communication with a server is based on the HTTP protocol. Below is a list
-of HTTP resources (endpoints) with corresponding methods and other required
+All communication with a server is based on the HTTP protocol. Below there is a
+list of HTTP resources (endpoints) with corresponding methods and other required
 data, which can be used with any modern HTTP client, like web browser.
 
-### POST /login
+### POST `/login`
 
 Login to the chat with given nickname. Client will receive cookie
 `SzmaterlokSession` with valid session token for one week.
@@ -30,7 +30,7 @@ One of the following.
 - [500](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500) - Internal
   server error. Something wen wrong, so try again later.
 
-### POST /logout
+### POST `/logout`
 
 Logout from the chat. This resource deletes `SzmaterlokSession` cookie.
 
@@ -40,7 +40,7 @@ Logout from the chat. This resource deletes `SzmaterlokSession` cookie.
   Successful logout attempt. See `Location` header for next resource, which
   client is being redirected (it will happen automatically on browser).
 
-### POST /message
+### POST `/message`
 
 Sent message to all chat clients.
 
@@ -70,7 +70,7 @@ Sent message to all chat clients.
 - [403](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403) -
   Forbidden. Resource require authentication. See `/login` resource.
 
-### GET /stream
+### GET `/stream`
 
 HTTP Stream with
 [SSE events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
@@ -87,14 +87,14 @@ object. Below you can find schemas for every event sent by `/stream` endpoint.
 
 ### sent-message
 
-```
+```json
 {
+  "id": "string",
+  "from": {
     "id": "string",
-    "from": {
-        "id": "string",
-        "nickname": "string"
-    },
-    "content": "string",
-    "sentAt": "string (datetime)"
+    "nickname": "string"
+  },
+  "content": "string",
+  "sentAt": "string (datetime)"
 }
 ```
