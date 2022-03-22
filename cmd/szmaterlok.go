@@ -9,12 +9,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 
 	"github.com/fenole/szmaterlok/service"
 )
 
 func run(ctx context.Context) error {
 	log := service.LoggerDefault()
+	log.SetLevel(logrus.DebugLevel)
 
 	if err := service.ConfigLoad(context.TODO()); err != nil {
 		return err
@@ -25,10 +27,16 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	tokenizer, err := service.NewSessionTokenizer(config.SessionSecret)
+	tokenizer, err := service.NewSessionAgeTokenizer(config.SessionSecret)
 	if err != nil {
 		return err
 	}
+
+	tokenizerCache := service.NewSessionTokenizerCache(service.SessionTokenizerCacheBuilder{
+		Wrapped: tokenizer,
+		Timeout: time.Second * 5,
+		Logger:  log,
+	})
 
 	bridge := service.NewBridge(ctx)
 	messageHandler := service.NewBridgeMessageHandler(bridge, log)
@@ -39,7 +47,7 @@ func run(ctx context.Context) error {
 		Logger: log,
 		SessionStore: &service.SessionCookieStore{
 			ExpirationTime: time.Hour * 24 * 7,
-			Tokenizer:      tokenizer,
+			Tokenizer:      tokenizerCache,
 			Clock:          service.ClockFunc(time.Now),
 		},
 		MessageSender:   messageHandler,

@@ -1,17 +1,13 @@
 package service
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
-	"filippo.io/age"
 	"github.com/google/uuid"
 )
 
@@ -52,83 +48,14 @@ func (ssf SessionStateFactory) MakeState(nickname string) SessionState {
 	}
 }
 
-// SessionTokenizer encodes and decodes session state token.
-type SessionTokenizer struct {
-	recipient age.Recipient
-	identity  age.Identity
-	base64    *base64.Encoding
-}
+// SessionTokenizer encodes and decodes session token.
+type SessionTokenizer interface {
+	// TokenEncode returns tokenized string which represents session state and
+	// can be decoded with the same interface implementation.
+	TokenEncode(state SessionState) (string, error)
 
-// NewSessionTokenizer returns SessionTokenizer which encrypts
-// and decrypts tokens with given secret. Make sure secret is
-// long enough and has high entropy.
-func NewSessionTokenizer(secret string) (*SessionTokenizer, error) {
-	r, err := age.NewScryptRecipient(secret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new scrypt recipient: %w", err)
-	}
-
-	i, err := age.NewScryptIdentity(secret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new scrypt identity: %w", err)
-	}
-
-	return &SessionTokenizer{
-		recipient: r,
-		identity:  i,
-		base64:    base64.URLEncoding,
-	}, nil
-}
-
-// TokenEncode encodes given session state into encrypted and base64 encoded
-// token string, which can be used to safely store session state in users
-// browser.
-func (st *SessionTokenizer) TokenEncode(state SessionState) (string, error) {
-	buff := &bytes.Buffer{}
-
-	wc, err := age.Encrypt(buff, st.recipient)
-	if err != nil {
-		return "", fmt.Errorf("failed to create encrypted writer: %w", err)
-	}
-
-	if err := json.NewEncoder(wc).Encode(state); err != nil {
-		return "", fmt.Errorf("failed to encode state into json: %w", err)
-	}
-
-	if err := wc.Close(); err != nil {
-		return "", fmt.Errorf("failed to encrypt session state: %w", err)
-	}
-
-	return st.base64.EncodeToString(buff.Bytes()), nil
-}
-
-// TokenDecode decodes given base64 encoded and encrypted token into
-// SessionState.
-func (st *SessionTokenizer) TokenDecode(token string) (*SessionState, error) {
-	b, err := st.base64.DecodeString(token)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode token from base64: %w", err)
-	}
-
-	buff := bytes.NewBuffer(b)
-
-	src, err := age.Decrypt(buff, st.identity)
-	if err != nil {
-		return nil, fmt.Errorf("failed to created encrypted reader: %w", err)
-	}
-
-	out := &bytes.Buffer{}
-
-	if _, err := io.Copy(out, src); err != nil {
-		return nil, fmt.Errorf("failed to read encrypted token: %w", err)
-	}
-
-	res := &SessionState{}
-	if err := json.NewDecoder(out).Decode(res); err != nil {
-		return nil, fmt.Errorf("failed to decode session state to json: %w", err)
-	}
-
-	return res, nil
+	// TokenDecode decodes given string token into valid session state.
+	TokenDecode(token string) (*SessionState, error)
 }
 
 // jsonResponse sends a JSON response with given status code.
@@ -223,7 +150,7 @@ type SessionCookieStore struct {
 	ExpirationTime time.Duration
 
 	// Tokenizer handles encoding and decoding of session state.
-	Tokenizer *SessionTokenizer
+	Tokenizer SessionTokenizer
 
 	// Clock returns current time.
 	Clock
