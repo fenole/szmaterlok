@@ -1,5 +1,7 @@
 # 🦋 szmaterlok
 
+[![Go Documentation](https://godocs.io/github.com/fenole/szmaterlok?status.svg)](https://godocs.io/github.com/fenole/szmaterlok)
+
 Multi user web chat application written in Go and modern web technologies.
 
 Interesting fact: **szmaterlok** is a polish-silesian word meaning _butterfly_.
