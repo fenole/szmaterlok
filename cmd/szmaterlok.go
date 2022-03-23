@@ -27,7 +27,15 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	tokenizer := service.NewSessionSimpleTokenizer()
+	tokenizerFactory := service.SessionTokenizerFactory{
+		Timeout: time.Minute,
+		Logger:  log,
+	}
+
+	tokenizer, err := tokenizerFactory.Tokenizer(&config)
+	if err != nil {
+		return err
+	}
 
 	bridge := service.NewBridge(ctx)
 	messageHandler := service.NewBridgeMessageHandler(bridge, log)

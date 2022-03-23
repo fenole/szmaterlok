@@ -32,6 +32,9 @@ const (
 
 	// ConfigSessionSecretVarName is env variable for secret session password.
 	ConfigSessionSecretVarName = "S8K_SESSION_SECRET"
+
+	// ConfigTokenizerVarName is env variable for tokenizer type used by szmaterlok.
+	ConfigTokenizerVarName = "S8K_TOKENIZER"
 )
 
 // Default values for configuration variables.
@@ -45,6 +48,15 @@ const (
 	// secret variable. Remember to change this value during
 	// production deployment of szmaterlok!
 	ConfigSessionSecretDefaultVal = "secret_password"
+
+	// ConfigTokenizerSimple is name for simple tokenizer backend type.
+	ConfigTokenizerSimple = "simple"
+
+	// ConfigTokenizerAge is name for age tokenizer backend type.
+	ConfigTokenizerAge = "age"
+
+	// ConfigTokenizerDefaultVal is default value for tokenizer type.
+	ConfigTokenizerDefaultVal = ConfigTokenizerSimple
 )
 
 // ConfigVariables represents state read from environmental
@@ -54,8 +66,12 @@ type ConfigVariables struct {
 	// which is used for listening to TCP/IP connections.
 	Address string
 
+	// Tokenizer is name of tokenizer type backend that should be
+	// used by application.
+	Tokenizer string
+
 	// SessionSecret is secret password which is used to encrypt
-	// and decrypt session state data.
+	// and decrypt session state data if tokenizer age was chose.
 	SessionSecret string
 }
 
@@ -77,6 +93,7 @@ func ConfigDefault() ConfigVariables {
 	return ConfigVariables{
 		Address:       ConfigAddressDefaultVal,
 		SessionSecret: ConfigSessionSecretDefaultVal,
+		Tokenizer:     ConfigTokenizerDefaultVal,
 	}
 }
 
@@ -89,6 +106,10 @@ func ConfigRead(c *ConfigVariables) error {
 
 	if secret := os.Getenv(ConfigSessionSecretVarName); secret != "" {
 		c.SessionSecret = secret
+	}
+
+	if tokenizer := os.Getenv(ConfigTokenizerVarName); tokenizer != "" {
+		c.Tokenizer = tokenizer
 	}
 
 	return nil

@@ -234,3 +234,43 @@ func (c *SessionTokenizerCache) TokenDecode(token string) (*SessionState, error)
 	entry.timer.Reset(c.timeout)
 	return &entry.value, nil
 }
+
+// SessionTokenizerFactory initiates tokenizer for szmaterlok based
+// on configuration variables.
+type SessionTokenizerFactory struct {
+	Timeout time.Duration
+	Logger  *logrus.Logger
+}
+
+var ErrInvalidTokenizerType = errors.New("session: invalid tokenizer type name")
+
+// Tokenizer builds session tokenizer wrapped with cache based on
+// the environmental variable from configuration.
+func (f *SessionTokenizerFactory) Tokenizer(config *ConfigVariables) (SessionTokenizer, error) {
+	cacheBuilder := SessionTokenizerCacheBuilder{
+		Wrapped: nil,
+		Timeout: f.Timeout,
+		Logger:  f.Logger,
+	}
+
+	switch config.Tokenizer {
+
+	case ConfigTokenizerSimple:
+		f.Logger.Info("Chose simple tokenizer backend.")
+		t := NewSessionSimpleTokenizer()
+		cacheBuilder.Wrapped = t
+		return NewSessionTokenizerCache(cacheBuilder), nil
+
+	case ConfigTokenizerAge:
+		f.Logger.Info("Chose age tokenizer backend.")
+		t, err := NewSessionAgeTokenizer(config.SessionSecret)
+		if err != nil {
+			return nil, err
+		}
+		cacheBuilder.Wrapped = t
+		return NewSessionTokenizerCache(cacheBuilder), nil
+
+	default:
+		return nil, ErrInvalidTokenizerType
+	}
+}
