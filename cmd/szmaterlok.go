@@ -27,16 +27,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	tokenizer, err := service.NewSessionAgeTokenizer(config.SessionSecret)
-	if err != nil {
-		return err
-	}
-
-	tokenizerCache := service.NewSessionTokenizerCache(service.SessionTokenizerCacheBuilder{
-		Wrapped: tokenizer,
-		Timeout: time.Second * 5,
-		Logger:  log,
-	})
+	tokenizer := service.NewSessionSimpleTokenizer()
 
 	bridge := service.NewBridge(ctx)
 	messageHandler := service.NewBridgeMessageHandler(bridge, log)
@@ -47,7 +38,7 @@ func run(ctx context.Context) error {
 		Logger: log,
 		SessionStore: &service.SessionCookieStore{
 			ExpirationTime: time.Hour * 24 * 7,
-			Tokenizer:      tokenizerCache,
+			Tokenizer:      tokenizer,
 			Clock:          service.ClockFunc(time.Now),
 		},
 		MessageSender:   messageHandler,

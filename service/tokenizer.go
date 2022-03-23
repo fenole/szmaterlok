@@ -4,14 +4,75 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 	"time"
 
 	"filippo.io/age"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
+
+// SessionSimpleTokenizer is a simple key/value storage for
+// string tokens and session state of users.
+type SessionSimpleTokenizer struct {
+	gen     IDGenerator
+	storage map[string]SessionState
+	mtx     *sync.RWMutex
+	base64  *base64.Encoding
+}
+
+// NewSessionSimpleTokenizer is default and safe constructor for SessionSimpleTokenizer.
+func NewSessionSimpleTokenizer() *SessionSimpleTokenizer {
+	return &SessionSimpleTokenizer{
+		gen:     IDGeneratorFunc(uuid.NewString),
+		storage: make(map[string]SessionState),
+		mtx:     &sync.RWMutex{},
+		base64:  base64.URLEncoding,
+	}
+}
+
+// TokenEncode returns tokenized string which represents session state and
+// can be decoded with the same interface implementation.
+func (t *SessionSimpleTokenizer) TokenEncode(state SessionState) (string, error) {
+	t.mtx.Lock()
+	defer t.mtx.Unlock()
+
+	token := t.gen.GenerateID()
+
+	hostname, err := os.Hostname()
+	if err == nil {
+		token = hostname + "/" + token
+	}
+
+	t.storage[token] = state
+
+	return t.base64.EncodeToString([]byte(token)), nil
+}
+
+var ErrMissingSessionToken = errors.New("session: missing token")
+
+// TokenDecode decodes given string token into valid session state.
+func (t *SessionSimpleTokenizer) TokenDecode(token string) (*SessionState, error) {
+	b, err := t.base64.DecodeString(token)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to decode token: %w", err)
+	}
+
+	t.mtx.RLock()
+	defer t.mtx.RUnlock()
+
+	token = string(b)
+	s, ok := t.storage[token]
+	if !ok {
+		return nil, ErrMissingSessionToken
+	}
+
+	return &s, nil
+}
 
 // SessionAgeTokenizer encodes and decodes session state token.
 type SessionAgeTokenizer struct {
