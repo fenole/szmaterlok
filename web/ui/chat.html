@@ -47,8 +47,10 @@
           </template>
         </header>
         <footer x-data="messageInput">
-          <textarea x-model="newMessage" placeholder="Enter your message..."></textarea>
-          <button @click="send">Send</button>
+          <form @submit.prevent="send">
+            <input type="text" x-model="newMessage" placeholder="Enter your message...">
+            <input type="submit" value="Send">
+          </form>
         </footer>
       </section>
     </article>
