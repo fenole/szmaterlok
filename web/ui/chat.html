@@ -32,8 +32,9 @@
       <h2>Messages</h2>
       <section class="card"
                x-data="messages"
-               @sse:message-sent.document="messages.push($event.detail.data)">
-        <header class="messages scroll">
+               @sse:message-sent.document="messages.push($event.detail.data);
+                                           $nextTick(() => { $refs.chat.scrollTop = $refs.chat.scrollHeight; });">
+        <header class="messages scroll" x-ref="chat">
           <template x-for="msg in messages" :key="msg.id">
             <article class="card">
               <header>
