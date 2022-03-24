@@ -55,6 +55,9 @@ const (
 	// ConfigTokenizerAge is name for age tokenizer backend type.
 	ConfigTokenizerAge = "age"
 
+	// ConfigTokenizerAES is name for AES tokenizer backend type.
+	ConfigTokenizerAES = "aes"
+
 	// ConfigTokenizerDefaultVal is default value for tokenizer type.
 	ConfigTokenizerDefaultVal = ConfigTokenizerSimple
 )

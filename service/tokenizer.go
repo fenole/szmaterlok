@@ -2,12 +2,16 @@ package service
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -153,6 +157,84 @@ func (st *SessionAgeTokenizer) TokenDecode(token string) (*SessionState, error) 
 	return res, nil
 }
 
+// SessionAESTokenizer implements stateless SessionTokenizer interface
+// with AES/CFB encryption.
+type SessionAESTokenizer struct {
+	block  cipher.Block
+	base64 *base64.Encoding
+}
+
+// NewSessionAESTokenizer returns AES session tokenizer. It is only safe
+// constructor and the default one also.
+//
+// The secret argument should be the AES key, either 16, 24, or 32 bytes
+// to select AES-128, AES-192, or AES-256.
+func NewSessionAESTokenizer(secret []byte) (*SessionAESTokenizer, error) {
+	block, err := aes.NewCipher(secret)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to crete new AES cipher block: %w", err)
+	}
+
+	return &SessionAESTokenizer{
+		block:  block,
+		base64: base64.URLEncoding,
+	}, nil
+}
+
+func (st *SessionAESTokenizer) newIV() ([]byte, error) {
+	iv := make([]byte, st.block.BlockSize())
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, fmt.Errorf("failed to fill iv: %w", err)
+	}
+
+	return iv, nil
+}
+
+// TokenEncode returns tokenized string which represents session state and
+// can be decoded with the same interface implementation.
+func (st *SessionAESTokenizer) TokenEncode(state SessionState) (string, error) {
+	b, err := json.Marshal(state)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode state into json: %w", err)
+	}
+
+	iv, err := st.newIV()
+	if err != nil {
+		return "", fmt.Errorf("failed to encode state with IV: %w", err)
+	}
+
+	cfb := cipher.NewCFBEncrypter(st.block, iv)
+	res := make([]byte, len(b))
+	cfb.XORKeyStream(res, b)
+	return st.base64.EncodeToString(iv) + ":" + st.base64.EncodeToString(res), nil
+}
+
+// TokenDecode decodes given string token into valid session state.
+func (st *SessionAESTokenizer) TokenDecode(token string) (*SessionState, error) {
+	splitted := strings.Split(token, ":")
+
+	iv, err := st.base64.DecodeString(splitted[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode iv from base64: %w", err)
+	}
+
+	b, err := st.base64.DecodeString(splitted[1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode token from base64: %w", err)
+	}
+
+	res := &SessionState{}
+	cfb := cipher.NewCFBDecrypter(st.block, iv)
+	decrypted := make([]byte, len(b))
+	cfb.XORKeyStream(decrypted, b)
+
+	if err := json.Unmarshal(decrypted, res); err != nil {
+		return nil, fmt.Errorf("failed to decode json state: %w", err)
+	}
+
+	return res, nil
+}
+
 type sessionTokenizerCacheEntry struct {
 	value SessionState
 	timer *time.Timer
@@ -264,6 +346,15 @@ func (f *SessionTokenizerFactory) Tokenizer(config *ConfigVariables) (SessionTok
 	case ConfigTokenizerAge:
 		f.Logger.Info("Chose age tokenizer backend.")
 		t, err := NewSessionAgeTokenizer(config.SessionSecret)
+		if err != nil {
+			return nil, err
+		}
+		cacheBuilder.Wrapped = t
+		return NewSessionTokenizerCache(cacheBuilder), nil
+
+	case ConfigTokenizerAES:
+		f.Logger.Info("Chose AES tokenizer backend.")
+		t, err := NewSessionAESTokenizer([]byte(config.SessionSecret))
 		if err != nil {
 			return nil, err
 		}
