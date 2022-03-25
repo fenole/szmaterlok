@@ -6,7 +6,6 @@ processes = []
 
 [env]
   S8K_ADDR = "0.0.0.0:8080"
-  S8K_TOKENIZER = "simple"
 
 [experimental]
   allowed_public_ports = []
