@@ -49,7 +49,7 @@
         </header>
         <footer x-data="messageInput">
           <form @submit.prevent="send">
-            <input type="text" x-model="newMessage" placeholder="Enter your message...">
+            <input type="text" x-model="newMessage" placeholder="Enter your message..." autofocus>
             <input type="submit" value="Send">
           </form>
         </footer>
