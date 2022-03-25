@@ -7,13 +7,19 @@
 {{ define "content" }}
 <nav class="demo">
   <a href="#" class="brand">
-    <h1>Szmaterlok</h1>
+    <h1>🦋 Szmaterlok</h1>
   </a>
   <input id="bmenub" type="checkbox" class="show">
-  <label for="bmenub" class="burger pseudo button">Menu</label>
+  <label for="bmenub" class="burger pseudo button">
+    <i class="bi bi-list"></i> Menu
+  </label>
   <form class="menu" action="/logout" method="POST">
-    <a href="https://github.com/fenole/szmaterlok" class="button pseudo">Source</a>
-    <button href="#" class="button error">Logout</button>
+    <a href="https://github.com/fenole/szmaterlok" class="button pseudo">
+      <i class="bi bi-github"></i> Source
+    </a>
+    <button href="#" class="button error">
+      <i class="bi bi-box-arrow-in-left"></i> Logout
+    </button>
   </form>
 </nav>
 
@@ -21,7 +27,7 @@
   <section class="flex five">
 
     <aside class="full fifth-1000">
-      <h2>Users</h2>
+      <h2><i class="bi bi-people"></i> Users</h2>
       <button class="pseudo">Annie</button>
       <button class="pseudo">Eren</button>
       <button class="pseudo">Mikasa</button>
@@ -29,7 +35,7 @@
     </aside>
 
     <article class="full four-fifth-1000">
-      <h2>Messages</h2>
+      <h2><i class="bi bi-chat"></i> Messages</h2>
       <section class="card"
                x-data="{
                 messages: [],
@@ -48,7 +54,7 @@
             <article class="card">
               <header>
                 <p x-text="msg.from.nickname"></p>
-                <a class="close">×</a>
+                <a class="close" @click="messages = messages.filter((m) => m.id != msg.id)">×</a>
               </header>
               <footer>
                 <p><span class="label success date" x-text="formatDate(msg.sentAt)"></span><span x-text="msg.content"></span></p>
@@ -66,7 +72,9 @@
           }">
           <form @submit.prevent="send">
             <input class="stack" type="text" x-model="newMessage" placeholder="Enter your message..." autofocus>
-            <input class="stack" type="submit" value="Send" x-bind:disabled='newMessage.length <= 0'>
+            <button class="stack" type="submit" x-bind:disabled='newMessage.length <= 0'>
+              <i class="bi bi-send-fill"></i> Send
+            </button>
           </form>
         </footer>
       </section>

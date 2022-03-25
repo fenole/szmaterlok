@@ -3,20 +3,31 @@
 {{ define "content" }}
 <nav class="demo">
   <a href="#" class="brand">
-    <h1>Szmaterlok</h1>
+    <h1>🦋 Szmaterlok</h1>
   </a>
   <input id="bmenub" type="checkbox" class="show">
-  <label for="bmenub" class="burger pseudo button">Menu</label>
+  <label for="bmenub" class="burger pseudo button">
+    <i class="bi bi-list"></i> Menu
+  </label>
   <div class="menu">
-    <a href="https://github.com/fenole/szmaterlok" class="button pseudo">Source</a>
+    <a href="https://github.com/fenole/szmaterlok" class="button pseudo">
+      <i class="bi bi-github"></i> Source
+    </a>
   </div>
 </nav>
 
 <main>
-  <h2>Login</h2>
+  <h2><i class="bi bi-door-open"></i> Login</h2>
+  <p>
+    Welcome to public <b>Szmaterlok</b> chat! Enter you nickname
+    below and let's start the conversation.
+  </p>
+
   <form class="half-600 third-800" action="/login" method="POST" x-data="{ nickname: '' }">
     <input class="stack" name="nickname" placeholder="Nickname" autofocus x-model="nickname">
-    <button class="stack" disabled x-bind:disabled="nickname <= 0">Enter</button>
+    <button type="submit" class="stack" disabled x-bind:disabled="nickname <= 0">
+      <i class="bi bi-box-arrow-in-right"></i> Enter
+    </button>
   </form>
 </main>
 {{ end }}
