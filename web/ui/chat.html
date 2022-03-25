@@ -31,7 +31,13 @@
     <article class="full four-fifth-1000">
       <h2>Messages</h2>
       <section class="card"
-               x-data="messages"
+               x-data="{
+                messages: [],
+
+                formatDate(sentAt) {
+                  return new Date(sentAt).toLocaleTimeString('en-gb', {});
+                }
+               }"
                @sse:message-sent.document="messages.push($event.detail.data);
                                            $nextTick(() => $refs.chat.scroll({
                                              top: $refs.chat.scrollHeight,
@@ -50,10 +56,17 @@
             </article>
           </template>
         </header>
-        <footer x-data="messageInput">
+        <footer x-data="{
+            newMessage: '',
+
+            send() {
+              s8k.api.sendMessage(this.newMessage);
+              this.newMessage = '';
+            }
+          }">
           <form @submit.prevent="send">
             <input class="stack" type="text" x-model="newMessage" placeholder="Enter your message..." autofocus>
-            <input class="stack" type="submit" value="Send">
+            <input class="stack" type="submit" value="Send" x-bind:disabled='newMessage.length <= 0'>
           </form>
         </footer>
       </section>
