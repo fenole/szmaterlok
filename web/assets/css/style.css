@@ -4,6 +4,13 @@ main {
   padding: 80px 0 0;
 }
 
+@media only screen and (max-width: 1000px) {
+  main {
+    padding-left: 1em;
+    padding-right: 1em;
+  }
+}
+
 .scroll {
   height: 400px;
   overflow: auto;

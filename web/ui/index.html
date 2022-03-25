@@ -14,7 +14,7 @@
 
 <main>
   <h2>Login</h2>
-  <form class="third" action="/login" method="POST" x-data="{ nickname: '' }">
+  <form class="half-600 third-800" action="/login" method="POST" x-data="{ nickname: '' }">
     <input class="stack" name="nickname" placeholder="Nickname" autofocus x-model="nickname">
     <button class="stack" disabled x-bind:disabled="nickname <= 0">Enter</button>
   </form>
