@@ -1,54 +1,46 @@
 const eventStreamResource = "/stream";
+const apiMessageResource = "/message"
+
+const ssePrefix = "sse:"
 const sseTypes = ["message-sent"];
 
-function setupSSE() {
-  let evtSource = new EventSource(eventStreamResource, {
-    withCredentials: true,
-  });
+document.addEventListener("alpine:init", () => {
+  window.s8k = {};
 
-  const handleEvent = (event) => {
-    document.dispatchEvent(
-      new CustomEvent("sse:" + event.type, {
-        bubbles: true,
-        detail: {
-          data: JSON.parse(event.data),
-        },
-      }),
-    );
+  window.s8k.sse = {
+    setup() {
+      let evtSource = new EventSource(eventStreamResource, {
+        withCredentials: true,
+      });
+
+      const handleEvent = (event) => {
+        document.dispatchEvent(
+          new CustomEvent(ssePrefix + event.type, {
+            bubbles: true,
+            detail: {
+              data: JSON.parse(event.data),
+            },
+          }),
+        );
+      };
+
+      sseTypes.forEach((eventType) => {
+        evtSource.addEventListener(eventType, handleEvent);
+      });
+
+      return evtSource;
+    },
   };
 
-  sseTypes.forEach((eventType) => {
-    evtSource.addEventListener(eventType, handleEvent);
-  });
-
-  return evtSource;
-}
-
-function sendMessage(msg) {
-  fetch("/message", {
-    method: "POST",
-    credentials: "include",
-    body: JSON.stringify({ content: msg }),
-  });
-}
-
-document.addEventListener("alpine:init", () => {
-  setupSSE();
-
-  Alpine.data("messages", () => ({
-    messages: [],
-
-    formatDate(sentAt) {
-      return new Date(sentAt).toLocaleTimeString("en-gb", {});
+  window.s8k.api = {
+    async sendMessage(msg) {
+      return await fetch(apiMessageResource, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ content: msg }),
+      });
     },
-  }));
+  };
 
-  Alpine.data("messageInput", () => ({
-    newMessage: "",
-
-    send() {
-      sendMessage(this.newMessage);
-      this.newMessage = "";
-    },
-  }));
+  s8k.sse.setup();
 });
