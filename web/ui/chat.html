@@ -48,22 +48,49 @@
 
                 formatDate(sentAt) {
                   return new Date(sentAt).toLocaleTimeString('en-gb', {});
+                },
+                receive(msg) {
+                  if (this.messages.length === 0) {
+                    this.messages.push({
+                      id: msg.id,
+                      from: msg.from,
+                      block: [msg],
+                    });
+                    return;
+                  }
+
+                  let last = this.messages[this.messages.length - 1];
+                  if (last.from.id === msg.from.id) {
+                    last.block.push(msg);
+                    return;
+                  }
+
+                  this.messages.push({
+                    from: msg.from,
+                    id: msg.id,
+                    block: [msg],
+                  });
                 }
                }"
-               @sse:message-sent.document="messages.push($event.detail.data);
+               @sse:message-sent.document="receive($event.detail.data);
                                            $nextTick(() => $refs.chat.scroll({
                                              top: $refs.chat.scrollHeight,
                                              behavior: 'smooth'
                                            }));">
         <header class="messages scroll" x-ref="chat">
-          <template x-for="msg in messages" :key="msg.id">
+          <template x-for="block in messages" :key="block.id">
             <article class="card">
               <header>
-                <p x-text="msg.from.nickname"></p>
-                <a class="close" @click="messages = messages.filter((m) => m.id != msg.id)">×</a>
+                <p x-text="block.from.nickname"></p>
+                <a class="close" @click="messages = messages.filter((b) => b.id != block.id)">×</a>
               </header>
               <footer>
-                <p><span class="label success date" x-text="formatDate(msg.sentAt)"></span><span x-text="msg.content"></span></p>
+                <template x-for="msg in block.block" :key="msg.id">
+                  <p>
+                    <span class="label success date" x-text="formatDate(msg.sentAt)"></span>
+                    <span x-text="msg.content"></span>
+                  </p>
+                </template>
               </footer>
             </article>
           </template>
