@@ -24,18 +24,24 @@
 </nav>
 
 <main>
-  <section class="flex five">
+  <section class="flex five" x-data="{ showUsers: true }">
 
-    <aside class="full fifth-1000">
-      <h2><i class="bi bi-people"></i> Users</h2>
+    <aside class="full fifth-1000" x-show="showUsers">
+      <h2 class="pseudo button" @click="showUsers = !showUsers">
+        <i class="bi bi-people"></i> Users
+      </h2>
       <button class="pseudo">Annie</button>
       <button class="pseudo">Eren</button>
       <button class="pseudo">Mikasa</button>
       <button class="pseudo">Armin</button>
     </aside>
 
-    <article class="full four-fifth-1000">
-      <h2><i class="bi bi-chat"></i> Messages</h2>
+    <article class="full" :class="showUsers && 'four-fifth-1000'">
+      <button x-show="!showUsers" class="pseudo button" @click="showUsers = !showUsers">
+        <i class="bi bi-people"></i> Users
+      </button>
+
+      <h2 class="pseudo button"><i class="bi bi-chat"></i> Messages</h2>
       <section class="card"
                x-data="{
                 messages: [],
