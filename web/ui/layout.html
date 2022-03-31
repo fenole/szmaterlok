@@ -1,17 +1,16 @@
 {{ define "layout" }}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-100">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>szmaterlok</title>
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/bootstrap-icons@1.8.1/font/bootstrap-icons.css"/>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/picnic@7.1.0/picnic.min.css"/>
-    <link rel="stylesheet" type="text/css" href="assets/css/style.css"/>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/tachyons/css/tachyons.min.css">
     {{ block "scripts" . }}{{ end }}
     <script defer src="https://unpkg.com/alpinejs@3.9.3/dist/cdn.min.js"></script>
   </head>
-  <body>
+  <body class="moon-gray bg-dark-gray helvetica flex flex-column items-stretch h-100">
     {{ block "content" . }}{{ end }}
   </body>
 </html>

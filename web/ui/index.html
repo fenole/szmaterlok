@@ -1,33 +1,55 @@
 {{ template "layout" }}
 
 {{ define "content" }}
-<nav class="demo">
-  <a href="#" class="brand">
-    <h1>🦋 Szmaterlok</h1>
-  </a>
-  <input id="bmenub" type="checkbox" class="show">
-  <label for="bmenub" class="burger pseudo button">
-    <i class="bi bi-list"></i> Menu
-  </label>
-  <div class="menu">
-    <a href="https://github.com/fenole/szmaterlok" class="button pseudo">
-      <i class="bi bi-github"></i> Source
-    </a>
-  </div>
-</nav>
+<header>
+  <nav class="dt w-100 border-box pa3">
+    <h1 class="dtc v-mid link dim w-25 f3" href="#">
+      Szmaterlok
+    </h1>
+    <div class="dtc v-mid w-75 tr">
+      <a
+        class="moon-gray link dim f6 f5-ns dib mr3 mr4-ns"
+        href="https://github.com/fenole/szmaterlok">
+        <i class="bi bi-github mr1"></i>Source
+      </a>
+    </div>
+  </nav>
+</header>
 
-<main>
-  <h2><i class="bi bi-door-open"></i> Login</h2>
-  <p>
-    Welcome to public <b>Szmaterlok</b> chat! Enter you nickname
-    below and let's start the conversation.
-  </p>
-
-  <form class="half-600 third-800" action="/login" method="POST" x-data="{ nickname: '' }">
-    <input class="stack" name="nickname" placeholder="Nickname" autofocus x-model="nickname">
-    <button type="submit" class="stack" disabled x-bind:disabled="nickname <= 0">
-      <i class="bi bi-box-arrow-in-right"></i> Enter
-    </button>
+<main class="mw-7 center">
+  <form class="measure center" action="/login" method="POST" x-data="{ nickname: '' }">
+    <fieldset class="ba b--transparent ph0 mh0">
+      <legend class="ph0 mh0">
+        <h2 class="f4 fw6">
+          <i class="bi bi-door-open mr1"></i>Login
+        </h2>
+        <small>
+          Welcome to public <b>Szmaterlok</b> chat! Enter you nickname
+          below and let's start the conversation.
+        </small>
+      </legend>
+      <div class="mt3">
+        <label class="db fw6 lh-copy f6" for="nickname">Nickname</label>
+        <input
+        class="pa2 moon-gray input-reset ba bg-transparent b--moon-gray hover-bg-moon-gray hover-dark-gray w-100"
+        type="text"
+        name="nickname"
+        id="nickname"
+        minlength="3"
+        maxlength="16"
+        autofocus
+        x-model="nickname">
+      </div>
+    </fieldset>
+    <div class="">
+      <button
+        class="b ph3 pv2 moon-gray input-reset ba bg-transparent grow pointer f6 dib"
+        type="submit"
+        :class="nickname.length > 0 ? 'b--moon-gray ' : ''"
+        :disabled="nickname <= 0">
+        <i class="bi bi-box-arrow-in-right mr1"></i> Enter
+      </button>
+    </div>
   </form>
 </main>
 {{ end }}
