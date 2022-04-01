@@ -5,45 +5,61 @@
 {{ end }}
 
 {{ define "content" }}
-<nav class="demo">
-  <a href="#" class="brand">
-    <h1>🦋 Szmaterlok</h1>
-  </a>
-  <input id="bmenub" type="checkbox" class="show">
-  <label for="bmenub" class="burger pseudo button">
-    <i class="bi bi-list"></i> Menu
-  </label>
-  <form class="menu" action="/logout" method="POST">
-    <a href="https://github.com/fenole/szmaterlok" class="button pseudo">
-      <i class="bi bi-github"></i> Source
-    </a>
-    <button href="#" class="button error">
-      <i class="bi bi-box-arrow-in-left"></i> Logout
+<header>
+  <nav class="dt w-100 border-box pa3">
+    <h1 class="dtc v-mid link dim w-25 f3" href="#">
+      Szmaterlok
+    </h1>
+    <form class="dtc v-mid w-75 tr" action="/logout" method="POST">
+      <a class="moon-gray link dim f6 f5-ns dib mr3 mr4-ns" href="https://github.com/fenole/szmaterlok">
+        <i class="bi bi-github mr1"></i>Source
+      </a>
+      <button class="moon-gray link dim f6 f5-ns dib pointer input-reset bn bg-transparent" type="submit">
+        <i class="bi bi-box-arrow-right mr1"></i>Logout
+      </button>
+    </form>
+  </nav>
+</header>
+
+<main class="flex flex-auto flex-column w-100 mw-100 center pa3" x-data="{ show: { chat: true, users: false } }">
+
+  <header class="pa2 ba">
+    <button
+        class="moon-gray b b--moon-gray ph3 pv2 input-reset ba bg-transparent grow pointer f6"
+        @click="show.users = ! show.users"
+        >
+        <i class="bi bi-people mr1"></i>Users
     </button>
-  </form>
-</nav>
+    <button
+        class="moon-gray b b--moon-gray ph3 pv2 input-reset ba bg-transparent grow pointer f6"
+        @click="show.chat = ! show.chat"
+        >
+        <i class="bi bi-chat mr1"></i>Chat
+    </button>
+  </header>
 
-<main>
-  <section class="flex five" x-data="{ showUsers: true }">
+  <section class="flex flex-column flex-row-l flex-auto">
 
-    <aside class="full fifth-1000" x-show="showUsers">
-      <h2 class="pseudo button" @click="showUsers = !showUsers">
-        <i class="bi bi-people"></i> Users
-      </h2>
-      <button class="pseudo">Annie</button>
-      <button class="pseudo">Eren</button>
-      <button class="pseudo">Mikasa</button>
-      <button class="pseudo">Armin</button>
+    <aside
+      class="flex flex-row flex-wrap overflow-auto-l flex-nowrap-l flex-column-l pa0 mt2 ba mr2-l mb2-l"
+      x-show="show.users">
+      <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
+        Annie
+      </div>
+      <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
+        Eren
+      </div>
+      <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
+        Mikasa
+      </div>
+      <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
+        Armin
+      </div>
     </aside>
 
-    <article class="full" :class="showUsers && 'four-fifth-1000'">
-      <button x-show="!showUsers" class="pseudo button" @click="showUsers = !showUsers">
-        <i class="bi bi-people"></i> Users
-      </button>
-
-      <h2 class="pseudo button"><i class="bi bi-chat"></i> Messages</h2>
-      <section class="card"
-               x-data="{
+    <section
+      class="flex-auto overflow-auto pa2 ba mv2"
+      x-data="{
                 messages: [],
 
                 formatDate(sentAt) {
@@ -72,46 +88,57 @@
                   });
                 }
                }"
-               @sse:message-sent.document="receive($event.detail.data);
-                                           $nextTick(() => $refs.chat.scroll({
-                                             top: $refs.chat.scrollHeight,
-                                             behavior: 'smooth'
-                                           }));">
-        <header class="messages scroll" x-ref="chat">
-          <template x-for="block in messages" :key="block.id">
-            <article class="card">
-              <header>
-                <p x-text="block.from.nickname"></p>
-                <a class="close" @click="messages = messages.filter((b) => b.id != block.id)">×</a>
-              </header>
-              <footer>
-                <template x-for="msg in block.block" :key="msg.id">
-                  <p>
-                    <span class="label success date" x-text="formatDate(msg.sentAt)"></span>
-                    <span x-text="msg.content"></span>
-                  </p>
-                </template>
-              </footer>
-            </article>
-          </template>
-        </header>
-        <footer x-data="{
-            newMessage: '',
+      x-show="show.chat"
+      x-ref="chat"
+      @sse:message-sent.document="receive($event.detail.data);
+                                  $nextTick(() => $refs.chat.scroll({
+                                    top: $refs.chat.scrollHeight,
+                                    behavior: 'smooth'
+                                  }));">
 
-            send() {
-              s8k.api.sendMessage(this.newMessage);
-              this.newMessage = '';
-            }
-          }">
-          <form @submit.prevent="send">
-            <input class="stack" type="text" x-model="newMessage" placeholder="Enter your message..." autofocus>
-            <button class="stack" type="submit" x-bind:disabled='newMessage.length <= 0'>
-              <i class="bi bi-send-fill"></i> Send
-            </button>
-          </form>
-        </footer>
-      </section>
-    </article>
+      <template x-for="block in messages" :key="block.id">
+        <article class="flex flex-column pa1 mv3 mh1 bl bw2 b--mon-gray bg-transparent">
+          <header>
+            <p class="f4 pa0 mh1 mb2 mt0" x-text="block.from.nickname"></p>
+          </header>
+          <footer>
+            <template x-for="msg in block.block" :key="msg.id">
+              <p class="pa0 ma1" style="overflow-wrap: break-word;">
+                <span class="bg-moon-gray dark-gray mr2 ph1" x-text="formatDate(msg.sentAt)"></span><span x-text="msg.content"></span>
+              </p>
+            </template>
+          </footer>
+        </article>
+      </template>
+
+    </section>
+
   </section>
+
+  <footer class="pa2 ba" x-data="{
+      newMessage: '',
+
+      send() {
+        s8k.api.sendMessage(this.newMessage);
+        this.newMessage = '';
+      }
+    }">
+    <form class="flex items-stretch" @submit.prevent="send">
+      <input
+        class="moon-gray flex-auto mr2 pa2 input-reset ba b--moon-gray bg-transparent hover-bg-moon-gray hover-dark-gray"
+        placeholder="Enter your message here."
+        type="text"
+        autofocus
+        x-model="newMessage">
+      <button
+        class="moon-gray b ph3 pv2 input-reset ba bg-transparent grow pointer f6"
+        type="submit"
+        :class="newMessage.length > 0 ? 'b--moon-gray' : ''"
+        :disabled="newMessage.length <= 0">
+        <i class="bi bi-send"></i> Send
+      </button>
+    </form>
+  </footer>
+
 </main>
 {{ end }}
