@@ -188,7 +188,7 @@ func HandlerStream(notifier MessageNotifier) http.HandlerFunc {
 // HandlerLoginDependencies holds behavioral dependencies for
 // http handler for sending messages.
 type HandlerSendMessageDependencies struct {
-	Sender MessageSender
+	Sender *BridgeEventProducer[EventSentMessage]
 	IDGenerator
 	Clock
 }
@@ -229,7 +229,7 @@ func HandlerSendMessage(deps HandlerSendMessageDependencies) http.HandlerFunc {
 		}
 
 		messageID := deps.GenerateID()
-		go deps.Sender.SendMessage(ctx, EventSentMessage{
+		go deps.Sender.SendEvent(ctx, messageID, EventSentMessage{
 			ID: messageID,
 			From: MessageAuthor{
 				ID:       state.ID,
