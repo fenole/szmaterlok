@@ -95,19 +95,17 @@ type Bridge struct {
 	queue  chan BridgeEvent
 	closer chan struct{}
 
-	hooks map[BridgeEventType]bridgeEventHandlerComposite
+	handler BridgeEventHandler
 }
 
 // NewBridge is constructor for event bridge. It returns
 // default instance of event bridge.
-func NewBridge(ctx context.Context) *Bridge {
+func NewBridge(ctx context.Context, handler BridgeEventHandler) *Bridge {
 	evtChan := make(chan BridgeEvent)
 	res := &Bridge{
-		queue:  evtChan,
-		closer: make(chan struct{}),
-		hooks: map[BridgeEventType]bridgeEventHandlerComposite{
-			BridgeEventGlob: {},
-		},
+		queue:   evtChan,
+		closer:  make(chan struct{}),
+		handler: handler,
 	}
 
 	go res.run(ctx)
@@ -118,20 +116,6 @@ func NewBridge(ctx context.Context) *Bridge {
 // a good idea to run it in a separate goroutine.
 func (b *Bridge) SendEvent(evt BridgeEvent) {
 	b.queue <- evt
-}
-
-// Hook adds given event handler to hook list for given event type.
-// Given hook will be fired as soon as event bridge receives new event
-// with matching event type.
-//
-// All hooks should be added before sending events to event bridge.
-func (b *Bridge) Hook(t BridgeEventType, h BridgeEventHandler) {
-	_, ok := b.hooks[t]
-	if !ok {
-		b.hooks[t] = bridgeEventHandlerComposite{}
-	}
-
-	b.hooks[t] = append(b.hooks[t], h)
 }
 
 // Shutdown closes event bridge and waits for current
@@ -147,37 +131,31 @@ func (b *Bridge) Shutdown(ctx context.Context) {
 	}
 }
 
+// goWithWaitGroup is helper for running jobs with the help
+// of wait group for further synchronization.
+func goWithWaitGroup(wg *sync.WaitGroup, f func()) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		f()
+	}()
+}
+
 // run is main event loop of event bridge.
 func (b *Bridge) run(ctx context.Context) {
 	wg := sync.WaitGroup{}
-
-	// Helper for running jobs with the help
-	// of wait group for further synchronization.
-	wgGo := func(f func()) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			f()
-		}()
-	}
 
 	// Main processing loop.
 	for evt := range b.queue {
 		evt := evt
 
-		globHandler, ok := b.hooks[BridgeEventGlob]
-		if ok {
-			wgGo(func() {
-				globHandler.EventHook(ctx, evt)
-			})
+		if b.handler == nil {
+			continue
 		}
 
-		handler, ok := b.hooks[evt.Name]
-		if ok {
-			wgGo(func() {
-				handler.EventHook(ctx, evt)
-			})
-		}
+		goWithWaitGroup(&wg, func() {
+			b.handler.EventHook(ctx, evt)
+		})
 	}
 
 	// Wait for all jobs to finish.
@@ -185,6 +163,52 @@ func (b *Bridge) run(ctx context.Context) {
 
 	// Send signal to closer and indicate event loop has finished.
 	b.closer <- struct{}{}
+}
+
+// BridgeEventRouter delegates different event types into
+// their associated hook handlers.
+type BridgeEventRouter struct {
+	hooks map[BridgeEventType]bridgeEventHandlerComposite
+}
+
+func NewBridgeEventRouter() *BridgeEventRouter {
+	return &BridgeEventRouter{
+		hooks: map[BridgeEventType]bridgeEventHandlerComposite{},
+	}
+}
+
+// Hook adds given event handler to hook list for given event type.
+// Given hook will be fired when router receives new event
+// with matching event type.
+//
+// All hooks should be added before mounting event router to bridge.
+func (r *BridgeEventRouter) Hook(t BridgeEventType, h BridgeEventHandler) {
+	_, ok := r.hooks[t]
+	if !ok {
+		r.hooks[t] = bridgeEventHandlerComposite{}
+	}
+
+	r.hooks[t] = append(r.hooks[t], h)
+}
+
+func (r *BridgeEventRouter) EventHook(ctx context.Context, evt BridgeEvent) {
+	wg := sync.WaitGroup{}
+
+	globHandler, ok := r.hooks[BridgeEventGlob]
+	if ok {
+		goWithWaitGroup(&wg, func() {
+			globHandler.EventHook(ctx, evt)
+		})
+	}
+
+	handler, ok := r.hooks[evt.Name]
+	if ok {
+		goWithWaitGroup(&wg, func() {
+			handler.EventHook(ctx, evt)
+		})
+	}
+
+	wg.Wait()
 }
 
 // BridgeMessageSent is event type for message sent event.
@@ -207,9 +231,8 @@ type BridgeMessageHandler struct {
 
 // NewBridgeMessageHandler is default and safe constructor for
 // BridgeMessageHandler.
-func NewBridgeMessageHandler(b *Bridge, log *logrus.Logger) *BridgeMessageHandler {
+func NewBridgeMessageHandler(log *logrus.Logger) *BridgeMessageHandler {
 	return &BridgeMessageHandler{
-		bridge:   b,
 		log:      log,
 		channels: make(map[messageSubscriber]chan<- sse.Event),
 		mtx:      &sync.RWMutex{},
@@ -243,36 +266,6 @@ func (a *BridgeMessageHandler) Subscribe(ctx context.Context, req MessageSubscri
 	return unsubscribe
 }
 
-const (
-	bridgeRequestIDHeaderVar   = "Request-ID"
-	bridgeContentTypeHeaderVar = "Content-Type"
-)
-
-// SendMessage sends event message to all subscribers. This
-// method is supposed to be blocking.
-func (a *BridgeMessageHandler) SendMessage(ctx context.Context, evt EventSentMessage) {
-	data, err := json.Marshal(evt)
-	if err != nil {
-		a.log.WithFields(logrus.Fields{
-			"eventID": evt.ID,
-			"reqID":   middleware.GetReqID(ctx),
-			"scope":   "BridgeMessageHandler.SendMessage",
-		}).Error("Failed to encode data as json.")
-		return
-	}
-
-	a.bridge.SendEvent(BridgeEvent{
-		ID:        evt.ID,
-		Name:      BridgeMessageSent,
-		CreatedAt: evt.SentAt.UnixMicro(),
-		Headers: BridgeHeaders{
-			bridgeContentTypeHeaderVar: "application/json; charset=utf-8",
-			bridgeRequestIDHeaderVar:   middleware.GetReqID(ctx),
-		},
-		Data: data,
-	})
-}
-
 // EventHook for message-sent event.
 func (a *BridgeMessageHandler) EventHook(_ context.Context, evt BridgeEvent) {
 	a.mtx.RLock()
@@ -296,4 +289,41 @@ func (a *BridgeMessageHandler) EventHook(_ context.Context, evt BridgeEvent) {
 			Data: evt.Data,
 		}
 	}
+}
+
+const (
+	bridgeRequestIDHeaderVar   = "Request-ID"
+	bridgeContentTypeHeaderVar = "Content-Type"
+)
+
+// BridgeEventProducer publishes events with given T type to event bridge.
+type BridgeEventProducer[T any] struct {
+	EventBridge *Bridge
+	Type        BridgeEventType
+	Log         *logrus.Logger
+	Clock
+}
+
+// SendEvent publishes event with given data of T type and unique ID.
+func (p *BridgeEventProducer[T]) SendEvent(ctx context.Context, id string, evt T) {
+	data, err := json.Marshal(evt)
+	if err != nil {
+		p.Log.WithFields(logrus.Fields{
+			"eventID": id,
+			"reqID":   middleware.GetReqID(ctx),
+			"scope":   "BridgeEventProducer.SendEvent",
+		}).Error("Failed to encode data as json.")
+		return
+	}
+
+	p.EventBridge.SendEvent(BridgeEvent{
+		ID:        id,
+		Name:      p.Type,
+		CreatedAt: p.Now().UnixMicro(),
+		Headers: BridgeHeaders{
+			bridgeContentTypeHeaderVar: "application/json; charset=utf-8",
+			bridgeRequestIDHeaderVar:   middleware.GetReqID(ctx),
+		},
+		Data: data,
+	})
 }

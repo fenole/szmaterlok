@@ -18,7 +18,7 @@ func run(ctx context.Context) error {
 	log := service.LoggerDefault()
 	log.SetLevel(logrus.DebugLevel)
 
-	if err := service.ConfigLoad(context.TODO()); err != nil {
+	if err := service.ConfigLoad(ctx); err != nil {
 		return err
 	}
 
@@ -37,10 +37,19 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	bridge := service.NewBridge(ctx)
-	messageHandler := service.NewBridgeMessageHandler(bridge, log)
+	messageHandler := service.NewBridgeMessageHandler(log)
 
-	bridge.Hook(service.BridgeMessageSent, messageHandler)
+	eventRouter := service.NewBridgeEventRouter()
+	eventRouter.Hook(service.BridgeMessageSent, messageHandler)
+
+	bridge := service.NewBridge(ctx, eventRouter)
+
+	msgSentProducer := &service.BridgeEventProducer[service.EventSentMessage]{
+		Type:        service.BridgeMessageSent,
+		EventBridge: bridge,
+		Log:         log,
+		Clock:       service.ClockFunc(time.Now),
+	}
 
 	r := service.NewRouter(service.RouterDependencies{
 		Logger: log,
@@ -49,10 +58,10 @@ func run(ctx context.Context) error {
 			Tokenizer:      tokenizer,
 			Clock:          service.ClockFunc(time.Now),
 		},
-		MessageSender:   messageHandler,
-		MessageNotifier: messageHandler,
-		IDGenerator:     service.IDGeneratorFunc(uuid.NewString),
-		Clock:           service.ClockFunc(time.Now),
+		MessageSentProducer: msgSentProducer,
+		MessageNotifier:     messageHandler,
+		IDGenerator:         service.IDGeneratorFunc(uuid.NewString),
+		Clock:               service.ClockFunc(time.Now),
 	})
 
 	c := make(chan os.Signal, 1)
