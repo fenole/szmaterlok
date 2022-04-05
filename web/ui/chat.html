@@ -101,6 +101,11 @@
       x-show="show.chat"
       x-ref="chat"
       @sse:message-sent.document="receive($event.detail.data);
+                                  notifyTab($event.detail.data);
+                                  $nextTick(() => $refs.chat.scroll({
+                                    top: $refs.chat.scrollHeight,
+                                    behavior: 'smooth'
+                                  }));">
       <template x-for="block in messages" :key="block.id">
         <article class="flex flex-column pa1 mv3 mh1 bl bw2 b--mon-gray bg-transparent">
           <header>
