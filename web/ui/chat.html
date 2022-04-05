@@ -24,24 +24,19 @@
 <main class="flex flex-auto flex-column w-100 mw-100 center pa3" x-data="{ show: { chat: true, users: false } }">
 
   <header class="pa2 ba">
-    <button
-        class="moon-gray b b--moon-gray ph3 pv2 input-reset ba bg-transparent grow pointer f6"
-        @click="show.users = ! show.users"
-        >
-        <i class="bi bi-people mr1"></i>Users
+    <button class="moon-gray b b--moon-gray ph3 pv2 input-reset ba bg-transparent grow pointer f6"
+      @click="show.users = ! show.users">
+      <i class="bi bi-people mr1"></i>Users
     </button>
-    <button
-        class="moon-gray b b--moon-gray ph3 pv2 input-reset ba bg-transparent grow pointer f6"
-        @click="show.chat = ! show.chat"
-        >
-        <i class="bi bi-chat mr1"></i>Chat
+    <button class="moon-gray b b--moon-gray ph3 pv2 input-reset ba bg-transparent grow pointer f6"
+      @click="show.chat = ! show.chat">
+      <i class="bi bi-chat mr1"></i>Chat
     </button>
   </header>
 
   <section class="flex flex-column flex-row-l flex-auto">
 
-    <aside
-      class="flex flex-row flex-wrap overflow-auto-l flex-nowrap-l flex-column-l pa0 mt2 ba mr2-l mb2-l"
+    <aside class="flex flex-row flex-wrap overflow-auto-l flex-nowrap-l flex-column-l pa0 mt2 ba mr2-l mb2-l"
       x-show="show.users">
       <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
         Annie
@@ -57,9 +52,7 @@
       </div>
     </aside>
 
-    <section
-      class="flex-auto overflow-auto pa2 ba mv2"
-      x-data="{
+    <section class="flex-auto overflow-auto pa2 ba mv2" x-data="{
                 messages: [],
 
                 formatDate(sentAt) {
@@ -86,11 +79,19 @@
                     id: msg.id,
                     block: [msg],
                   });
+                },
+                notifyTab(msg) {
+                  if (!document.hasFocus()) {
+                    let oldTitle = document.title;
+                    let newTitle =  msg.from.nickname + ' sent message';
+                    document.title = newTitle;
+                    setTimeout(() => {
+                      document.title = oldTitle;
+                    }, 2000);
+                  }  
                 }
-               }"
-      x-show="show.chat"
-      x-ref="chat"
-      @sse:message-sent.document="receive($event.detail.data);
+               }" x-show="show.chat" x-ref="chat" @sse:message-sent.document="receive($event.detail.data);
+                                  notifyTab($event.detail.data);
                                   $nextTick(() => $refs.chat.scroll({
                                     top: $refs.chat.scrollHeight,
                                     behavior: 'smooth'
@@ -104,7 +105,8 @@
           <footer>
             <template x-for="msg in block.block" :key="msg.id">
               <p class="pa0 ma1" style="overflow-wrap: break-word;">
-                <span class="bg-moon-gray dark-gray mr2 ph1" x-text="formatDate(msg.sentAt)"></span><span x-text="msg.content"></span>
+                <span class="bg-moon-gray dark-gray mr2 ph1" x-text="formatDate(msg.sentAt)"></span><span
+                  x-text="msg.content"></span>
               </p>
             </template>
           </footer>
@@ -126,15 +128,9 @@
     <form class="flex items-stretch" @submit.prevent="send">
       <input
         class="moon-gray flex-auto mr2 pa2 input-reset ba b--moon-gray bg-transparent hover-bg-moon-gray hover-dark-gray"
-        placeholder="Enter your message here."
-        type="text"
-        autofocus
-        x-model="newMessage">
-      <button
-        class="moon-gray b ph3 pv2 input-reset ba bg-transparent grow pointer f6"
-        type="submit"
-        :class="newMessage.length > 0 ? 'b--moon-gray' : ''"
-        :disabled="newMessage.length <= 0">
+        placeholder="Enter your message here." type="text" autofocus x-model="newMessage">
+      <button class="moon-gray b ph3 pv2 input-reset ba bg-transparent grow pointer f6" type="submit"
+        :class="newMessage.length > 0 ? 'b--moon-gray' : ''" :disabled="newMessage.length <= 0">
         <i class="bi bi-send"></i> Send
       </button>
     </form>
