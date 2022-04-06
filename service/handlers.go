@@ -88,8 +88,8 @@ func HandlerLogout(cs *SessionCookieStore) http.HandlerFunc {
 // MessageSent is SSE event type for message sent event.
 const MessageSent = "message-sent"
 
-// MessageAuthor is author of single message sent.
-type MessageAuthor struct {
+// ChatUser is author of single message sent.
+type ChatUser struct {
 	ID       string `json:"id"`
 	Nickname string `json:"nickname"`
 }
@@ -97,17 +97,24 @@ type MessageAuthor struct {
 // EventSentMessage is model for event of single sent message
 // by client to all listeners.
 type EventSentMessage struct {
-	ID      string        `json:"id"`
-	From    MessageAuthor `json:"from"`
-	Content string        `json:"content"`
-	SentAt  time.Time     `json:"sentAt"`
+	ID      string    `json:"id"`
+	From    ChatUser  `json:"from"`
+	Content string    `json:"content"`
+	SentAt  time.Time `json:"sentAt"`
 }
 
-// MessageSender sends clients event messages.
-type MessageSender interface {
-	// SendMessage sends event message to all subscribers. This
-	// method is supposed to be blocking.
-	SendMessage(ctx context.Context, evt EventSentMessage)
+// EventUserJoin is model for event of single user joining chat.
+type EventUserJoin struct {
+	ID       string    `json:"id"`
+	User     ChatUser  `json:"user"`
+	JoinedAt time.Time `json:"joinedAt"`
+}
+
+// EventUserJoin is model for event of single user leaving chat.
+type EventUserLeft struct {
+	ID     string    `json:"id"`
+	User   ChatUser  `json:"user"`
+	LeftAt time.Time `json:"leftAt"`
 }
 
 // MessageSubscribeRequest holds arguments for subscribe
@@ -130,11 +137,65 @@ type MessageNotifier interface {
 	Subscribe(ctx context.Context, args MessageSubscribeRequest) func()
 }
 
+// EventAnnouncer wraps MessageNotifier and user activities producers
+// and announces user presence to every event listener during single
+// subscribe and unsubscribe action.
+type EventAnnouncer struct {
+	MessageNotifier
+
+	UserJoinProducer *BridgeEventProducer[EventUserJoin]
+	UserLeftProducer *BridgeEventProducer[EventUserLeft]
+
+	Clock
+	IDGenerator
+}
+
+// Subscribe given ID for SSE events. Returns unsubscribe func.
+func (ea *EventAnnouncer) Subscribe(ctx context.Context, args MessageSubscribeRequest) func() {
+	state := SessionContextState(ctx)
+	if state == nil {
+		return nil
+	}
+
+	joinID := ea.GenerateID()
+	go ea.UserJoinProducer.SendEvent(ctx, joinID, EventUserJoin{
+		ID: joinID,
+		User: ChatUser{
+			ID:       state.ID,
+			Nickname: state.Nickname,
+		},
+		JoinedAt: ea.Now(),
+	})
+
+	unsubscribe := ea.MessageNotifier.Subscribe(ctx, args)
+	wrappedUnsubscribe := func() {
+		id := ea.GenerateID()
+		go ea.UserLeftProducer.SendEvent(ctx, id, EventUserLeft{
+			ID: id,
+			User: ChatUser{
+				ID:       state.ID,
+				Nickname: state.Nickname,
+			},
+			LeftAt: ea.Now(),
+		})
+		unsubscribe()
+	}
+
+	return wrappedUnsubscribe
+}
+
+// HandlerStreamDependencies holds arguments for HandlerStream http handler.
+type HandlerStreamDependencies struct {
+	MessageNotifier
+	IDGenerator
+	Clock
+}
+
 // HandlerStream is SSE event stream handler, which sends event notifications
 // to clients. It requires authentication.
 //
 // See SessionRequired middleware.
-func HandlerStream(notifier MessageNotifier) http.HandlerFunc {
+func HandlerStream(deps HandlerStreamDependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		state := SessionContextState(ctx)
@@ -156,7 +217,7 @@ func HandlerStream(notifier MessageNotifier) http.HandlerFunc {
 		}
 
 		evts := make(chan sse.Event)
-		unsubscribe := notifier.Subscribe(ctx, MessageSubscribeRequest{
+		unsubscribe := deps.Subscribe(ctx, MessageSubscribeRequest{
 			ID:        state.ID,
 			RequestID: middleware.GetReqID(ctx),
 			Channel:   evts,
@@ -231,7 +292,7 @@ func HandlerSendMessage(deps HandlerSendMessageDependencies) http.HandlerFunc {
 		messageID := deps.GenerateID()
 		go deps.Sender.SendEvent(ctx, messageID, EventSentMessage{
 			ID: messageID,
-			From: MessageAuthor{
+			From: ChatUser{
 				ID:       state.ID,
 				Nickname: state.Nickname,
 			},
