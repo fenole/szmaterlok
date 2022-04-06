@@ -85,6 +85,12 @@ func (ehc bridgeEventHandlerComposite) EventHook(ctx context.Context, evt Bridge
 	wg.Wait()
 }
 
+// BridgeStorage pushes events to event store.
+type BridgeStorage interface {
+	// StoreEvent stores given bridge event in event storage.
+	StoreEvent(context.Context, BridgeEvent) error
+}
+
 // Bridge is asynchronous queue for events. It can process
 // events from different sources spread all across szmaterlok
 // application and handles them with event hooks represented
@@ -96,16 +102,27 @@ type Bridge struct {
 	closer chan struct{}
 
 	handler BridgeEventHandler
+	log     *logrus.Logger
+	storage BridgeStorage
+}
+
+// BridgeBuilder holds arguments for building event bridge.
+type BridgeBuilder struct {
+	Handler BridgeEventHandler
+	Logger  *logrus.Logger
+	Storage BridgeStorage
 }
 
 // NewBridge is constructor for event bridge. It returns
 // default instance of event bridge.
-func NewBridge(ctx context.Context, handler BridgeEventHandler) *Bridge {
+func NewBridge(ctx context.Context, args BridgeBuilder) *Bridge {
 	evtChan := make(chan BridgeEvent)
 	res := &Bridge{
 		queue:   evtChan,
 		closer:  make(chan struct{}),
-		handler: handler,
+		handler: args.Handler,
+		log:     args.Logger,
+		storage: args.Storage,
 	}
 
 	go res.run(ctx)
@@ -148,6 +165,21 @@ func (b *Bridge) run(ctx context.Context) {
 	// Main processing loop.
 	for evt := range b.queue {
 		evt := evt
+
+		if err := b.storage.StoreEvent(ctx, evt); err != nil {
+			b.log.WithFields(logrus.Fields{
+				"reqID": evt.Headers.Get(bridgeRequestIDHeaderVar),
+				"evtID": evt.ID,
+			}).Error("Failed to push event to event store.")
+			go func() {
+				b.log.WithFields(logrus.Fields{
+					"reqID": evt.Headers.Get(bridgeRequestIDHeaderVar),
+					"evtID": evt.ID,
+				}).Error("Retrying sending failing event to event bridge.")
+				b.queue <- evt
+			}()
+			continue
+		}
 
 		if b.handler == nil {
 			continue
@@ -328,7 +360,7 @@ func (p *BridgeEventProducer[T]) SendEvent(ctx context.Context, id string, evt T
 	p.EventBridge.SendEvent(BridgeEvent{
 		ID:        id,
 		Name:      p.Type,
-		CreatedAt: p.Now().UnixMicro(),
+		CreatedAt: p.Now().Unix(),
 		Headers: BridgeHeaders{
 			bridgeContentTypeHeaderVar: "application/json; charset=utf-8",
 			bridgeRequestIDHeaderVar:   middleware.GetReqID(ctx),
