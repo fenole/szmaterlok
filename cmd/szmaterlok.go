@@ -41,27 +41,23 @@ func run(ctx context.Context) error {
 
 	eventRouter := service.NewBridgeEventRouter()
 	eventRouter.Hook(service.BridgeMessageSent, messageHandler)
+	eventRouter.Hook(service.BridgeUserJoin, messageHandler)
+	eventRouter.Hook(service.BridgeUserLeft, messageHandler)
 
 	bridge := service.NewBridge(ctx, eventRouter)
 
-	msgSentProducer := &service.BridgeEventProducer[service.EventSentMessage]{
-		Type:        service.BridgeMessageSent,
-		EventBridge: bridge,
-		Log:         log,
-		Clock:       service.ClockFunc(time.Now),
-	}
-
+	clock := service.ClockFunc(time.Now)
 	r := service.NewRouter(service.RouterDependencies{
 		Logger: log,
 		SessionStore: &service.SessionCookieStore{
 			ExpirationTime: time.Hour * 24 * 7,
 			Tokenizer:      tokenizer,
-			Clock:          service.ClockFunc(time.Now),
+			Clock:          clock,
 		},
-		MessageSentProducer: msgSentProducer,
-		MessageNotifier:     messageHandler,
-		IDGenerator:         service.IDGeneratorFunc(uuid.NewString),
-		Clock:               service.ClockFunc(time.Now),
+		Bridge:          bridge,
+		MessageNotifier: messageHandler,
+		IDGenerator:     service.IDGeneratorFunc(uuid.NewString),
+		Clock:           clock,
 	})
 
 	c := make(chan os.Signal, 1)

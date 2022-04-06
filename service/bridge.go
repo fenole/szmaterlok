@@ -211,8 +211,17 @@ func (r *BridgeEventRouter) EventHook(ctx context.Context, evt BridgeEvent) {
 	wg.Wait()
 }
 
-// BridgeMessageSent is event type for message sent event.
-const BridgeMessageSent = BridgeEventType(MessageSent)
+// Types for bridge events.
+const (
+	// BridgeMessageSent is event type for message sent event.
+	BridgeMessageSent = BridgeEventType(MessageSent)
+
+	// BridgeUserLeft is event type fired when user's leaving chat.
+	BridgeUserJoin = BridgeEventType("user-join")
+
+	// BridgeUserJoin is event type fired when user's joining chat.
+	BridgeUserLeft = BridgeEventType("user-left")
+)
 
 type messageSubscriber struct {
 	id        string
@@ -266,26 +275,25 @@ func (a *BridgeMessageHandler) Subscribe(ctx context.Context, req MessageSubscri
 	return unsubscribe
 }
 
-// EventHook for message-sent event.
+// EventHook for SSE events sent to browsers.
 func (a *BridgeMessageHandler) EventHook(_ context.Context, evt BridgeEvent) {
 	a.mtx.RLock()
 	defer a.mtx.RUnlock()
 
-	msg := &EventSentMessage{}
-	if err := json.Unmarshal(evt.Data, msg); err != nil {
+	if evt.Headers.Get(bridgeContentTypeHeaderVar) != contentTypeApplicationJSON {
 		a.log.WithFields(logrus.Fields{
 			"eventType": string(evt.Name),
 			"eventID":   evt.ID,
 			"reqID":     evt.Headers.Get(bridgeRequestIDHeaderVar),
 			"scope":     "BridgeMessageHandler.EventHook",
-		}).Error("Failed to parse json from event data blob.")
+		}).Error("Invalid content type of event data.")
 		return
 	}
 
 	for _, c := range a.channels {
 		c <- sse.Event{
-			ID:   msg.ID,
-			Type: MessageSent,
+			ID:   evt.ID,
+			Type: string(evt.Name),
 			Data: evt.Data,
 		}
 	}
@@ -294,6 +302,7 @@ func (a *BridgeMessageHandler) EventHook(_ context.Context, evt BridgeEvent) {
 const (
 	bridgeRequestIDHeaderVar   = "Request-ID"
 	bridgeContentTypeHeaderVar = "Content-Type"
+	contentTypeApplicationJSON = "application/json; charset=utf-8"
 )
 
 // BridgeEventProducer publishes events with given T type to event bridge.

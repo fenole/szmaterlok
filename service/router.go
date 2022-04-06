@@ -14,9 +14,10 @@ import (
 // RouterDependencies holds all configurated dependencies
 // for new http router.
 type RouterDependencies struct {
-	Logger              *logrus.Logger
-	SessionStore        *SessionCookieStore
-	MessageSentProducer *BridgeEventProducer[EventSentMessage]
+	Logger       *logrus.Logger
+	SessionStore *SessionCookieStore
+	Bridge       *Bridge
+
 	MessageNotifier
 	IDGenerator
 	Clock
@@ -40,9 +41,34 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 	}))
 	r.Post("/logout", HandlerLogout(deps.SessionStore))
 	r.With(SessionRequired(deps.SessionStore)).Get("/chat", HandlerChat(web.UI))
-	r.With(SessionRequired(deps.SessionStore), sse.Headers).Get("/stream", HandlerStream(deps))
+	r.With(SessionRequired(deps.SessionStore), sse.Headers).Get("/stream", HandlerStream(HandlerStreamDependencies{
+		MessageNotifier: &EventAnnouncer{
+			MessageNotifier: deps.MessageNotifier,
+			UserJoinProducer: &BridgeEventProducer[EventUserJoin]{
+				EventBridge: deps.Bridge,
+				Type:        BridgeUserJoin,
+				Log:         deps.Logger,
+				Clock:       deps,
+			},
+			UserLeftProducer: &BridgeEventProducer[EventUserLeft]{
+				EventBridge: deps.Bridge,
+				Type:        BridgeUserLeft,
+				Log:         deps.Logger,
+				Clock:       deps,
+			},
+			Clock:       deps,
+			IDGenerator: deps,
+		},
+		IDGenerator: deps,
+		Clock:       deps,
+	}))
 	r.With(SessionRequired(deps.SessionStore)).Post("/message", HandlerSendMessage(HandlerSendMessageDependencies{
-		Sender:      deps.MessageSentProducer,
+		Sender: &BridgeEventProducer[EventSentMessage]{
+			EventBridge: deps.Bridge,
+			Type:        BridgeMessageSent,
+			Log:         deps.Logger,
+			Clock:       deps,
+		},
 		IDGenerator: deps,
 		Clock:       deps,
 	}))
