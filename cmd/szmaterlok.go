@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/fenole/szmaterlok/service"
+	"github.com/fenole/szmaterlok/storage"
 )
 
 func run(ctx context.Context) error {
@@ -37,6 +38,11 @@ func run(ctx context.Context) error {
 		return err
 	}
 
+	storage, err := storage.NewSQLiteStorage(ctx, config.Database)
+	if err != nil {
+		return err
+	}
+
 	messageHandler := service.NewBridgeMessageHandler(log)
 
 	eventRouter := service.NewBridgeEventRouter()
@@ -44,7 +50,11 @@ func run(ctx context.Context) error {
 	eventRouter.Hook(service.BridgeUserJoin, messageHandler)
 	eventRouter.Hook(service.BridgeUserLeft, messageHandler)
 
-	bridge := service.NewBridge(ctx, eventRouter)
+	bridge := service.NewBridge(ctx, service.BridgeBuilder{
+		Handler: eventRouter,
+		Logger:  log,
+		Storage: storage,
+	})
 
 	clock := service.ClockFunc(time.Now)
 	r := service.NewRouter(service.RouterDependencies{

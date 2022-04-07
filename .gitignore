@@ -20,3 +20,7 @@
 
 # Go workspace file
 go.work
+
+# sqlite files
+*.sqlite
+*.sqlite3
