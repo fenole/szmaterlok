@@ -18,6 +18,7 @@ type SQLiteStorage struct {
 	db  *sql.DB
 }
 
+// NewSQLiteStorage opens and migrates storage from given path.
 func NewSQLiteStorage(ctx context.Context, path string) (*SQLiteStorage, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -41,6 +42,7 @@ func NewSQLiteStorage(ctx context.Context, path string) (*SQLiteStorage, error) 
 //go:embed sqlite_store_event.sql
 var storeEventQuery string
 
+// StoreEvent stores given bridge event in sqlite event storage.
 func (s *SQLiteStorage) StoreEvent(ctx context.Context, evt service.BridgeEvent) error {
 	headers, err := json.Marshal(evt.Headers)
 	if err != nil {
