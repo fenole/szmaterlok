@@ -6,6 +6,12 @@ processes = []
 
 [env]
   S8K_ADDR = "0.0.0.0:8080"
+  S8K_DB = "/storage/szmaterlok.sqlite3"
+
+[mounts]
+  source="szmaterlok_storage"
+  destination="/storage"
+
 
 [experimental]
   allowed_public_ports = []
