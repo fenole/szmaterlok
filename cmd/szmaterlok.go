@@ -38,7 +38,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	storage, err := storage.NewSQLiteStorage(ctx, "szmaterlok.sqlite3")
+	storage, err := storage.NewSQLiteStorage(ctx, config.Database)
 	if err != nil {
 		return err
 	}

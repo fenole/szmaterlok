@@ -35,6 +35,10 @@ const (
 
 	// ConfigTokenizerVarName is env variable for tokenizer type used by szmaterlok.
 	ConfigTokenizerVarName = "S8K_TOKENIZER"
+
+	// ConfigDatabasePathVarName is env variable for database connection string
+	// (filepath to sqlite file).
+	ConfigDatabasePathVarName = "S8K_DB"
 )
 
 // Default values for configuration variables.
@@ -60,6 +64,10 @@ const (
 
 	// ConfigTokenizerDefaultVal is default value for tokenizer type.
 	ConfigTokenizerDefaultVal = ConfigTokenizerSimple
+
+	// ConfigDatabasePathDefaultVal is default filepath for sqlite3 szmaterlok
+	// database.
+	ConfigDatabasePathDefaultVal = "szmaterlok.sqlite3"
 )
 
 // ConfigVariables represents state read from environmental
@@ -76,6 +84,9 @@ type ConfigVariables struct {
 	// SessionSecret is secret password which is used to encrypt
 	// and decrypt session state data if tokenizer age was chose.
 	SessionSecret string
+
+	// Database holds connection string for szmaterlok event storage.
+	Database string
 }
 
 // ConfigLoad loads all the config files with environmental variables.
@@ -97,6 +108,7 @@ func ConfigDefault() ConfigVariables {
 		Address:       ConfigAddressDefaultVal,
 		SessionSecret: ConfigSessionSecretDefaultVal,
 		Tokenizer:     ConfigTokenizerDefaultVal,
+		Database:      ConfigDatabasePathDefaultVal,
 	}
 }
 
@@ -113,6 +125,10 @@ func ConfigRead(c *ConfigVariables) error {
 
 	if tokenizer := os.Getenv(ConfigTokenizerVarName); tokenizer != "" {
 		c.Tokenizer = tokenizer
+	}
+
+	if db := os.Getenv(ConfigDatabasePathVarName); db != "" {
+		c.Database = db
 	}
 
 	return nil
