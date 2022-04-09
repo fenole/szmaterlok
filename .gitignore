@@ -24,3 +24,5 @@ go.work
 # sqlite files
 *.sqlite
 *.sqlite3
+*-shm
+*-wal
