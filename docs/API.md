@@ -77,7 +77,7 @@ HTTP Stream with
 Using `/stream` resource requires client to has valid `SzmaterlokSession` cookie
 set.
 
-See `SSE Events` section for more information.
+See `SSE Events` section for more information about particular events.
 
 ## SSE Events
 
@@ -85,7 +85,10 @@ Every `SSE` event sent consists of `data` field. All of `data` fields of every
 _szmaterlok_ event are encoded as [json](https://www.json.org/json-en.html)
 object. Below you can find schemas for every event sent by `/stream` endpoint.
 
-### sent-message
+### message-sent
+
+`message-sent` is fired every time when some user is sending message
+through `/message` endpoint. Every user receives every message sent event.
 
 ```json
 {
@@ -96,5 +99,35 @@ object. Below you can find schemas for every event sent by `/stream` endpoint.
   },
   "content": "string",
   "sentAt": "string (datetime)"
+}
+```
+
+### user-join
+
+`user-join` event is fired by server when new user joins chat.
+
+```json
+{
+  "id": "string",
+  "user": {
+    "id": "string",
+    "nickname": "string"
+  },
+  "joinedAt": "string (datetime)"
+}
+```
+
+### user-left
+
+`user-left` event is fired by server when some user lefts chat.
+
+```json
+{
+  "id": "string",
+  "user": {
+    "id": "string",
+    "nickname": "string"
+  },
+  "leftAt": "string (datetime)"
 }
 ```
