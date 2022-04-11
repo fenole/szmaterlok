@@ -87,8 +87,8 @@ object. Below you can find schemas for every event sent by `/stream` endpoint.
 
 ### message-sent
 
-`message-sent` is fired every time when some user is sending message
-through `/message` endpoint. Every user receives every message sent event.
+`message-sent` is fired every time when some user is sending message through
+`/message` endpoint. Every user receives every message sent event.
 
 ```json
 {
