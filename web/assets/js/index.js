@@ -1,7 +1,7 @@
 const eventStreamResource = "/stream";
-const apiMessageResource = "/message"
+const apiMessageResource = "/message";
 
-const ssePrefix = "sse:"
+const ssePrefix = "sse:";
 const sseTypes = ["message-sent"];
 
 document.addEventListener("alpine:init", () => {
