@@ -307,3 +307,50 @@ func HandlerSendMessage(deps HandlerSendMessageDependencies) http.HandlerFunc {
 		})
 	}
 }
+
+// OnlineChatUser holds information about single
+// user, which is currently using chat
+type OnlineChatUser struct {
+	ID       string `json:"id"`
+	Nickname string `json:"nickname"`
+}
+
+// AllChatUsersStore stores information about current online users.
+type AllChatUsersStore interface {
+
+	// AllChatUsers returns all online users which are currently using chat.
+	AllChatUsers(ctx context.Context) ([]OnlineChatUser, error)
+}
+
+// HandlerOnlineUsers sends list of online users, which are using chat.
+func HandlerOnlineUsers(log *logrus.Logger, store AllChatUsersStore) http.HandlerFunc {
+	type response struct {
+		Users []OnlineChatUser `json:"users"`
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		log := log.WithFields(logrus.Fields{
+			"reqID": middleware.GetReqID(ctx),
+		})
+
+		users, err := store.AllChatUsers(ctx)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"error": err.Error(),
+			}).Error("Failed to retrieve online users.")
+			jsonResponse(w, http.StatusInternalServerError, responseWrapper{
+				Error: errorResponse{
+					Code:    http.StatusInternalServerError,
+					Message: "Failed to retrieve users list. Please try again later.",
+				},
+			})
+			return
+		}
+
+		jsonResponse(w, http.StatusOK, responseWrapper{
+			Data: response{
+				Users: users,
+			},
+		})
+	}
+}
