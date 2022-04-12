@@ -15,11 +15,17 @@ document.addEventListener("alpine:init", () => {
       });
 
       const handleEvent = (event) => {
+        let data = JSON.parse(event.data);
+
         document.dispatchEvent(
           new CustomEvent(ssePrefix + event.type, {
             bubbles: true,
             detail: {
-              data: JSON.parse(event.data),
+              data: {
+                ...data,
+                datetime: data.sentAt || data.leftAt || data.joinedAt,
+                type: event.type,
+              },
             },
           }),
         );
