@@ -70,6 +70,29 @@ Sent message to all chat clients.
 - [403](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403) -
   Forbidden. Resource require authentication. See `/login` resource.
 
+### Get `/users`
+
+Returns list of online users.
+
+**Response**
+
+- [200](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/200) -
+  Everything is ok. Check out response body for online users.
+
+```json
+{
+  "data": {
+    "users": [{
+      "id": "string",
+      "nickname": "string"
+    }]
+  }
+}
+```
+
+- [500](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500) -
+  Something went wrong on the server side.
+
 ### GET `/stream`
 
 HTTP Stream with
