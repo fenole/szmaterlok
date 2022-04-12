@@ -59,7 +59,13 @@
       class="flex-auto overflow-auto pa2 ba mv2"
       x-data="{
                 messages: [],
+                notifications: [], 
 
+                get stream() {
+                  return this.messages.concat(this.notifications).sort(
+                    (a, b) => new Date(a.datetime) - new Date(b.datetime)
+                  )
+                },
                 formatDate(sentAt) {
                   return new Date(sentAt).toLocaleTimeString('en-gb', {});
                 },
@@ -68,13 +74,15 @@
                     this.messages.push({
                       id: msg.id,
                       from: msg.from,
+                      datetime: msg.datetime,
+                      type: msg.type,
                       block: [msg],
                     });
                     return;
                   }
 
-                  let last = this.messages[this.messages.length - 1];
-                  if (last.from.id === msg.from.id) {
+                  let last = this.stream[this.stream.length - 1];
+                  if (last.from && last.from.id === msg.from.id) {
                     last.block.push(msg);
                     return;
                   }
@@ -82,6 +90,8 @@
                   this.messages.push({
                     from: msg.from,
                     id: msg.id,
+                    datetime: msg.datetime,
+                    type: msg.type,
                     block: [msg],
                   });
                 },
@@ -94,29 +104,52 @@
                       document.title = oldTitle;
                     }, 2000);
                   }  
-                }
+                },
+                scrollDown(tick, chatRef) {
+                  tick(() => chatRef.scroll({
+                    top: chatRef.scrollHeight,
+                    behavior: 'smooth',
+                  }));
+                },
               }"
       x-show="show.chat"
       x-ref="chat"
+      @sse:user-join.document="notifications.push($event.detail.data);
+                               scrollDown($nextTick, $refs.chat);"
+      @sse:user-left.document="notifications.push($event.detail.data);
+                               scrollDown($nextTick, $refs.chat);"
       @sse:message-sent.document="receive($event.detail.data);
                                   notifyTab($event.detail.data);
-                                  $nextTick(() => $refs.chat.scroll({
-                                    top: $refs.chat.scrollHeight,
-                                    behavior: 'smooth'
-                                  }));">
-      <template x-for="block in messages" :key="block.id">
-        <article class="flex flex-column pa1 mv3 mh1 bl bw2 b--mon-gray bg-transparent">
-          <header>
-            <p class="f4 pa0 mh1 mb2 mt0" x-text="block.from.nickname"></p>
-          </header>
-          <footer>
-            <template x-for="msg in block.block" :key="msg.id">
-              <p class="pa0 ma1" style="overflow-wrap: break-word;">
-                <span class="bg-moon-gray dark-gray mr2 ph1" x-text="formatDate(msg.sentAt)"></span><span x-text="msg.content"></span>
-              </p>
-            </template>
-          </footer>
-        </article>
+                                  scrollDown($nextTick, $refs.chat);">
+      <template x-for="s in stream" :key="s.id">
+        <div>
+          <template x-if="s.type === 'message-sent'">
+            <article class="flex flex-column pa1 mv3 mh1 bl bw2 b--mon-gray bg-transparent">
+              <header>
+                <p class="f4 pa0 mh1 mb2 mt0" x-text="s.from.nickname"></p>
+              </header>
+              <footer>
+                <template x-for="msg in s.block" :key="msg.id">
+                  <p class="pa0 ma1" style="overflow-wrap: break-word;">
+                    <span class="bg-moon-gray dark-gray mr2 ph1" x-text="formatDate(msg.sentAt)"></span><span x-text="msg.content"></span>
+                  </p>
+                </template>
+              </footer>
+            </article>
+          </template>
+          <template x-if="s.type === 'user-join'">
+            <p class="pa0 ma1" style="overflow-wrap: break-word;">
+              <span class="bg-moon-gray dark-gray mr2 ph1" x-text="formatDate(s.datetime)"></span>
+              <span x-text="s.user.nickname + ' joins the chat.'"></span>
+            </p>
+          </template>
+          <template x-if="s.type === 'user-left'">
+            <p class="pa0 ma1" style="overflow-wrap: break-word;">
+              <span class="bg-moon-gray dark-gray mr2 ph1" x-text="formatDate(s.datetime)"></span>
+              <span x-text="s.user.nickname + ' lefts the chat.'"></span>
+            </p>
+          </template>
+        </div>
       </template>
 
     </section>
