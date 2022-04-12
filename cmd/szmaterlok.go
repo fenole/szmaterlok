@@ -43,12 +43,16 @@ func run(ctx context.Context) error {
 		return err
 	}
 
+	stateOnlineUsers := service.NewStateOnlineUsers()
+
 	messageHandler := service.NewBridgeMessageHandler(log)
 
 	eventRouter := service.NewBridgeEventRouter()
 	eventRouter.Hook(service.BridgeMessageSent, messageHandler)
 	eventRouter.Hook(service.BridgeUserJoin, messageHandler)
 	eventRouter.Hook(service.BridgeUserLeft, messageHandler)
+	eventRouter.Hook(service.BridgeUserJoin, service.StateUserJoinHook(log, stateOnlineUsers))
+	eventRouter.Hook(service.BridgeUserLeft, service.StateUserLeftHook(log, stateOnlineUsers))
 
 	bridge := service.NewBridge(ctx, service.BridgeBuilder{
 		Handler: eventRouter,
@@ -64,10 +68,11 @@ func run(ctx context.Context) error {
 			Tokenizer:      tokenizer,
 			Clock:          clock,
 		},
-		Bridge:          bridge,
-		MessageNotifier: messageHandler,
-		IDGenerator:     service.IDGeneratorFunc(uuid.NewString),
-		Clock:           clock,
+		Bridge:            bridge,
+		AllChatUsersStore: stateOnlineUsers,
+		MessageNotifier:   messageHandler,
+		IDGenerator:       service.IDGeneratorFunc(uuid.NewString),
+		Clock:             clock,
 	})
 
 	c := make(chan os.Signal, 1)

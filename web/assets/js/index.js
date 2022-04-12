@@ -1,8 +1,9 @@
 const eventStreamResource = "/stream";
 const apiMessageResource = "/message";
+const apiOnlineUsers = "/users";
 
 const ssePrefix = "sse:";
-const sseTypes = ["message-sent"];
+const sseTypes = ["message-sent", "user-join", "user-left"];
 
 document.addEventListener("alpine:init", () => {
   window.s8k = {};
@@ -39,6 +40,14 @@ document.addEventListener("alpine:init", () => {
         credentials: "include",
         body: JSON.stringify({ content: msg }),
       });
+    },
+
+    async fetchUsers() {
+      let res = await fetch(apiOnlineUsers, {
+        method: "GET",
+        credentials: "include",
+      });
+      return await res.json();
     },
   };
 

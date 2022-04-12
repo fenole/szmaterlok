@@ -18,6 +18,7 @@ type RouterDependencies struct {
 	SessionStore *SessionCookieStore
 	Bridge       *Bridge
 
+	AllChatUsersStore
 	MessageNotifier
 	IDGenerator
 	Clock
@@ -26,6 +27,8 @@ type RouterDependencies struct {
 // NewRouter returns new configured chi mux router.
 func NewRouter(deps RouterDependencies) *chi.Mux {
 	r := chi.NewRouter()
+
+	sessionRequired := SessionRequired(deps.SessionStore)
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RequestLogger(&LoggerLogFormatter{
@@ -40,8 +43,8 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 		SessionStore: deps.SessionStore,
 	}))
 	r.Post("/logout", HandlerLogout(deps.SessionStore))
-	r.With(SessionRequired(deps.SessionStore)).Get("/chat", HandlerChat(web.UI))
-	r.With(SessionRequired(deps.SessionStore), sse.Headers).Get("/stream", HandlerStream(HandlerStreamDependencies{
+	r.With(sessionRequired).Get("/chat", HandlerChat(web.UI))
+	r.With(sessionRequired, sse.Headers).Get("/stream", HandlerStream(HandlerStreamDependencies{
 		MessageNotifier: &EventAnnouncer{
 			MessageNotifier: deps.MessageNotifier,
 			UserJoinProducer: &BridgeEventProducer[EventUserJoin]{
@@ -62,7 +65,7 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 		IDGenerator: deps,
 		Clock:       deps,
 	}))
-	r.With(SessionRequired(deps.SessionStore)).Post("/message", HandlerSendMessage(HandlerSendMessageDependencies{
+	r.With(sessionRequired).Post("/message", HandlerSendMessage(HandlerSendMessageDependencies{
 		Sender: &BridgeEventProducer[EventSentMessage]{
 			EventBridge: deps.Bridge,
 			Type:        BridgeMessageSent,
@@ -72,6 +75,7 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 		IDGenerator: deps,
 		Clock:       deps,
 	}))
+	r.With(sessionRequired).Get("/users", HandlerOnlineUsers(deps.Logger, deps))
 	r.Handle("/*", http.FileServer(http.FS(web.Assets)))
 
 	return r

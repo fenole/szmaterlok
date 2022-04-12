@@ -42,19 +42,17 @@
 
     <aside
       class="flex flex-row flex-wrap overflow-auto-l flex-nowrap-l flex-column-l pa0 mt2 ba mr2-l mb2-l"
-      x-show="show.users">
-      <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
-        Annie
-      </div>
-      <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
-        Eren
-      </div>
-      <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
-        Mikasa
-      </div>
-      <div class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6">
-        Armin
-      </div>
+      x-show="show.users"
+      x-data="{ users: [] }"
+      x-init="setTimeout(() => s8k.api.fetchUsers().then(v => { users = v.data.users; }), 500)"
+      @sse:user-join.document="users.push($event.detail.data.user)"
+      @sse:user-left.document="users = users.filter(u => u.id != $event.detail.data.user.id)">
+      <template x-for="user in users" :key="user.id">
+        <div
+          class="moon-gray b b--moon-gray ph3 pv2 ma2 input-reset ba bg-transparent f6"
+          x-text="user.nickname">
+        </div>
+      </template>
     </aside>
 
     <section
