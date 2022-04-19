@@ -46,7 +46,7 @@ func run(ctx context.Context) error {
 	stateOnlineUsers := service.NewStateOnlineUsers()
 
 	messageHandler := service.NewBridgeMessageHandler(log)
-	lastMessagesBuffer := service.NewLastMessagesBuffer(10, log)
+	lastMessagesBuffer := service.NewLastMessagesBuffer(config.LastMessagesBufferSize, log)
 
 	eventRouter := service.NewBridgeEventRouter()
 	eventRouter.Hook(service.BridgeMessageSent, messageHandler)
