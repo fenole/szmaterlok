@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -46,6 +47,21 @@ func run(ctx context.Context) error {
 	stateOnlineUsers := service.NewStateOnlineUsers()
 
 	messageHandler := service.NewBridgeMessageHandler(log)
+	lastMessagesBuffer := service.NewLastMessagesBuffer(config.LastMessagesBufferSize, log)
+
+	stateEventRouter := service.NewBridgeEventRouter()
+	stateEventRouter.Hook(service.BridgeMessageSent, lastMessagesBuffer)
+
+	stateBuilder := service.StateBuilder{
+		Archive: storage,
+		Handler: stateEventRouter,
+	}
+
+	log.Println("Rebuilding state.")
+	if err := stateBuilder.Rebuild(ctx); err != nil {
+		return fmt.Errorf("failed to rebuild state: %w", err)
+	}
+	log.Println("State rebuilding process has succeed.")
 
 	eventRouter := service.NewBridgeEventRouter()
 	eventRouter.Hook(service.BridgeMessageSent, messageHandler)
@@ -53,6 +69,7 @@ func run(ctx context.Context) error {
 	eventRouter.Hook(service.BridgeUserLeft, messageHandler)
 	eventRouter.Hook(service.BridgeUserJoin, service.StateUserJoinHook(log, stateOnlineUsers))
 	eventRouter.Hook(service.BridgeUserLeft, service.StateUserLeftHook(log, stateOnlineUsers))
+	eventRouter.Hook(service.BridgeMessageSent, lastMessagesBuffer)
 
 	bridge := service.NewBridge(ctx, service.BridgeBuilder{
 		Handler: eventRouter,
@@ -70,9 +87,13 @@ func run(ctx context.Context) error {
 		},
 		Bridge:            bridge,
 		AllChatUsersStore: stateOnlineUsers,
-		MessageNotifier:   messageHandler,
-		IDGenerator:       service.IDGeneratorFunc(uuid.NewString),
-		Clock:             clock,
+		MessageNotifier: &service.MessageNotifierWithBuffer{
+			Notifier: messageHandler,
+			Buffer:   lastMessagesBuffer,
+			Logger:   log,
+		},
+		IDGenerator: service.IDGeneratorFunc(uuid.NewString),
+		Clock:       clock,
 	})
 
 	c := make(chan os.Signal, 1)

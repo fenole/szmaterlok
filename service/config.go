@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	env "github.com/joho/godotenv"
 )
@@ -39,6 +41,9 @@ const (
 	// ConfigDatabasePathVarName is env variable for database connection string
 	// (filepath to sqlite file).
 	ConfigDatabasePathVarName = "S8K_DB"
+
+	// ConfigLastMessagesBufferSizeVarName is env variable for size of last messages buffer.
+	ConfigLastMessagesBufferSizeVarName = "S8K_LAST_MSG_BUFFER_SIZE"
 )
 
 // Default values for configuration variables.
@@ -68,6 +73,10 @@ const (
 	// ConfigDatabasePathDefaultVal is default filepath for sqlite3 szmaterlok
 	// database.
 	ConfigDatabasePathDefaultVal = "szmaterlok.sqlite3"
+
+	// ConfigLastMessagesBufferSizeDefaultVal is default value for maximal
+	// last message buffer size.
+	ConfigLastMessagesBufferSizeDefaultVal = 10
 )
 
 // ConfigVariables represents state read from environmental
@@ -87,6 +96,10 @@ type ConfigVariables struct {
 
 	// Database holds connection string for szmaterlok event storage.
 	Database string
+
+	// LastMessagesBufferSize describes maximal number stored in last
+	// messages buffer that is sent to the users, when they're joining chat.
+	LastMessagesBufferSize int
 }
 
 // ConfigLoad loads all the config files with environmental variables.
@@ -105,10 +118,11 @@ func ConfigLoad(ctx context.Context) error {
 // ConfigDefault returns default configuration for szmaterlok.
 func ConfigDefault() ConfigVariables {
 	return ConfigVariables{
-		Address:       ConfigAddressDefaultVal,
-		SessionSecret: ConfigSessionSecretDefaultVal,
-		Tokenizer:     ConfigTokenizerDefaultVal,
-		Database:      ConfigDatabasePathDefaultVal,
+		Address:                ConfigAddressDefaultVal,
+		SessionSecret:          ConfigSessionSecretDefaultVal,
+		Tokenizer:              ConfigTokenizerDefaultVal,
+		Database:               ConfigDatabasePathDefaultVal,
+		LastMessagesBufferSize: ConfigLastMessagesBufferSizeDefaultVal,
 	}
 }
 
@@ -129,6 +143,14 @@ func ConfigRead(c *ConfigVariables) error {
 
 	if db := os.Getenv(ConfigDatabasePathVarName); db != "" {
 		c.Database = db
+	}
+
+	if lmbs := os.Getenv(ConfigLastMessagesBufferSizeVarName); lmbs != "" {
+		lmbsParsed, err := strconv.Atoi(lmbs)
+		if err != nil {
+			return fmt.Errorf("failed to parse last message buffer size config value: %w", err)
+		}
+		c.LastMessagesBufferSize = lmbsParsed
 	}
 
 	return nil

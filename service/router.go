@@ -44,7 +44,7 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 	}))
 	r.Post("/logout", HandlerLogout(deps.SessionStore))
 	r.With(sessionRequired).Get("/chat", HandlerChat(web.UI))
-	r.With(sessionRequired, sse.Headers).Get("/stream", HandlerStream(HandlerStreamDependencies{
+	r.With(LastEventIDMiddleware, sessionRequired, sse.Headers).Get("/stream", HandlerStream(HandlerStreamDependencies{
 		MessageNotifier: &EventAnnouncer{
 			MessageNotifier: deps.MessageNotifier,
 			UserJoinProducer: &BridgeEventProducer[EventUserJoin]{

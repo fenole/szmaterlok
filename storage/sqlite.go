@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"sync"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/fenole/szmaterlok/service"
 
 	_ "embed"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -63,6 +66,61 @@ func (s *SQLiteStorage) StoreEvent(ctx context.Context, evt service.BridgeEvent)
 	)
 	if err != nil {
 		return fmt.Errorf("failed to store event: %w", err)
+	}
+
+	return nil
+}
+
+//go:embed sqlite_events.sql
+var eventsQuery string
+
+// Events sends all events from state archive through given channels
+// grouped by their creation date.
+func (s *SQLiteStorage) Events(ctx context.Context, c chan<- service.BridgeEvent) error {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	rows, err := s.db.QueryContext(ctx, eventsQuery)
+	if err != nil {
+		return fmt.Errorf("failed to create query: %w", err)
+	}
+	defer rows.Close()
+
+	var rawEvent struct {
+		name      string
+		id        string
+		headers   []byte
+		data      []byte
+		createdAt int64
+	}
+
+	for rows.Next() {
+		if err := rows.Scan(
+			&rawEvent.id,
+			&rawEvent.name,
+			&rawEvent.createdAt,
+			&rawEvent.headers,
+			&rawEvent.data,
+		); err != nil {
+			return fmt.Errorf("failed to scan event: %w", err)
+		}
+
+		headers := service.BridgeHeaders{}
+		if err := json.Unmarshal(rawEvent.headers, &headers); err != nil {
+			return fmt.Errorf("failed to parse event headers: %w", err)
+		}
+
+		c <- service.BridgeEvent{
+			Name:      service.BridgeEventType(rawEvent.name),
+			ID:        rawEvent.id,
+			Headers:   headers,
+			CreatedAt: rawEvent.createdAt,
+			Data:      slices.Clone(rawEvent.data),
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("rows iteration failure: %w", err)
 	}
 
 	return nil
