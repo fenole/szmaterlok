@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -47,6 +48,20 @@ func run(ctx context.Context) error {
 
 	messageHandler := service.NewBridgeMessageHandler(log)
 	lastMessagesBuffer := service.NewLastMessagesBuffer(config.LastMessagesBufferSize, log)
+
+	stateEventRouter := service.NewBridgeEventRouter()
+	stateEventRouter.Hook(service.BridgeMessageSent, lastMessagesBuffer)
+
+	stateBuilder := service.StateBuilder{
+		Archive: storage,
+		Handler: stateEventRouter,
+	}
+
+	log.Println("Rebuilding state.")
+	if err := stateBuilder.Rebuild(ctx); err != nil {
+		return fmt.Errorf("failed to rebuild state: %w", err)
+	}
+	log.Println("State rebuilding process has succeed.")
 
 	eventRouter := service.NewBridgeEventRouter()
 	eventRouter.Hook(service.BridgeMessageSent, messageHandler)

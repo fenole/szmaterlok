@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -132,4 +133,44 @@ func StateUserLeftHook(log *logrus.Logger, s *StateOnlineUsers) BridgeEventHandl
 		}
 
 	}
+}
+
+// StateArchive stores events from past. With state archive application
+// is able to rebuild its state.
+type StateArchive interface {
+	// Events sends all events from state archive through given channels
+	// grouped by their creation date.
+	Events(context.Context, chan<- BridgeEvent) error
+}
+
+// StateBuilder rebuilds state of application with events from
+// state archive.
+type StateBuilder struct {
+	// Archive stores past events.
+	Archive StateArchive
+
+	// Handler rebuilds state by applying hook to events
+	// from archive.
+	Handler BridgeEventHandler
+}
+
+// Rebuild whole state of application.
+func (sb *StateBuilder) Rebuild(ctx context.Context) error {
+	errc := make(chan error, 1)
+	evtc := make(chan BridgeEvent)
+
+	go func() {
+		defer close(evtc)
+		errc <- sb.Archive.Events(ctx, evtc)
+	}()
+
+	for evt := range evtc {
+		sb.Handler.EventHook(ctx, evt)
+	}
+
+	if err := <-errc; err != nil {
+		return fmt.Errorf("failed to read from archive: %w", err)
+	}
+
+	return nil
 }
