@@ -1,6 +1,7 @@
 {{ template "layout" }}
 
 {{ define "scripts" }}
+<script defer src="https://unpkg.com/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
 <script src="assets/js/index.js"></script>
 {{ end }}
 
@@ -156,8 +157,8 @@
 
   </section>
 
-  <footer class="pa2 ba" x-data="{
-      newMessage: '',
+  <footer class="pa2 ba" x-data="{ 
+      newMessage: $persist(''),
 
       send() {
         s8k.api.sendMessage(this.newMessage);
