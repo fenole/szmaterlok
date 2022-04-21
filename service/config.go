@@ -44,6 +44,9 @@ const (
 
 	// ConfigLastMessagesBufferSizeVarName is env variable for size of last messages buffer.
 	ConfigLastMessagesBufferSizeVarName = "S8K_LAST_MSG_BUFFER_SIZE"
+
+	// ConfigMaxMessageSizeVarName is env variable for maximum message size.
+	ConfigMaxMessageSizeVarName = "S8K_MAX_MSG_SIZE"
 )
 
 // Default values for configuration variables.
@@ -77,6 +80,10 @@ const (
 	// ConfigLastMessagesBufferSizeDefaultVal is default value for maximal
 	// last message buffer size.
 	ConfigLastMessagesBufferSizeDefaultVal = 10
+
+	// ConfigMaxMessageSizeDefaultVal is default value for maximum
+	// message size (in bytes).
+	ConfigMaxMessageSizeDefaultVal = 255
 )
 
 // ConfigVariables represents state read from environmental
@@ -100,6 +107,9 @@ type ConfigVariables struct {
 	// LastMessagesBufferSize describes maximal number stored in last
 	// messages buffer that is sent to the users, when they're joining chat.
 	LastMessagesBufferSize int
+
+	// MaximumMessageSize is maximal number of runes for single message.
+	MaximumMessageSize int
 }
 
 // ConfigLoad loads all the config files with environmental variables.
@@ -123,6 +133,7 @@ func ConfigDefault() ConfigVariables {
 		Tokenizer:              ConfigTokenizerDefaultVal,
 		Database:               ConfigDatabasePathDefaultVal,
 		LastMessagesBufferSize: ConfigLastMessagesBufferSizeDefaultVal,
+		MaximumMessageSize:     ConfigMaxMessageSizeDefaultVal,
 	}
 }
 
@@ -151,6 +162,14 @@ func ConfigRead(c *ConfigVariables) error {
 			return fmt.Errorf("failed to parse last message buffer size config value: %w", err)
 		}
 		c.LastMessagesBufferSize = lmbsParsed
+	}
+
+	if mms := os.Getenv(ConfigMaxMessageSizeVarName); mms != "" {
+		mmsParsed, err := strconv.Atoi(mms)
+		if err != nil {
+			return fmt.Errorf("failed to parse maximal message size: %w", err)
+		}
+		c.MaximumMessageSize = mmsParsed
 	}
 
 	return nil

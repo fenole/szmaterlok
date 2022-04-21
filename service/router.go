@@ -18,6 +18,8 @@ type RouterDependencies struct {
 	SessionStore *SessionCookieStore
 	Bridge       *Bridge
 
+	MaximumMessageSize int
+
 	AllChatUsersStore
 	MessageNotifier
 	IDGenerator
@@ -72,8 +74,9 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 			Log:         deps.Logger,
 			Clock:       deps,
 		},
-		IDGenerator: deps,
-		Clock:       deps,
+		IDGenerator:    deps,
+		Clock:          deps,
+		MaxMessageSize: deps.MaximumMessageSize,
 	}))
 	r.With(sessionRequired).Get("/users", HandlerOnlineUsers(deps.Logger, deps))
 	r.Handle("/*", http.FileServer(http.FS(web.Assets)))
