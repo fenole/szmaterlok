@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -249,7 +250,8 @@ func HandlerStream(deps HandlerStreamDependencies) http.HandlerFunc {
 // HandlerLoginDependencies holds behavioral dependencies for
 // http handler for sending messages.
 type HandlerSendMessageDependencies struct {
-	Sender *BridgeEventProducer[EventSentMessage]
+	MaxMessageSize int
+	Sender         *BridgeEventProducer[EventSentMessage]
 	IDGenerator
 	Clock
 }
@@ -261,6 +263,13 @@ func HandlerSendMessage(deps HandlerSendMessageDependencies) http.HandlerFunc {
 	}
 	type response struct {
 		ID string `json:"id"`
+	}
+
+	verify := func(r *request) error {
+		if len([]rune(r.Content)) > deps.MaxMessageSize {
+			return fmt.Errorf("maximum message length has been exceeded")
+		}
+		return nil
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -284,6 +293,16 @@ func HandlerSendMessage(deps HandlerSendMessageDependencies) http.HandlerFunc {
 				Error: errorResponse{
 					Code:    http.StatusBadRequest,
 					Message: "Failed to parse body.",
+				},
+			})
+			return
+		}
+
+		if err := verify(req); err != nil {
+			jsonResponse(w, http.StatusBadRequest, responseWrapper{
+				Error: errorResponse{
+					Code:    http.StatusBadRequest,
+					Message: fmt.Sprintf("Invalid request body: %s", err.Error()),
 				},
 			})
 			return

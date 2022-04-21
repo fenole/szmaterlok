@@ -42,7 +42,7 @@
   <section class="flex flex-column flex-row-l flex-auto">
 
     <aside
-      class="flex flex-row flex-wrap overflow-auto-l flex-nowrap-l flex-column-l pa0 mt2 ba mr2-l mb2-l"
+      class="flex flex-row flex-wrap overflow-auto-l flex-nowrap-l flex-column-l w-20-l pa0 mt2 ba mr2-l mb2-l"
       x-show="show.users"
       x-data="{ users: [] }"
       x-init="setTimeout(() => s8k.api.fetchUsers().then(v => { users = v.data.users; }), 500)"

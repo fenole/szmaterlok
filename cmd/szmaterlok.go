@@ -79,7 +79,8 @@ func run(ctx context.Context) error {
 
 	clock := service.ClockFunc(time.Now)
 	r := service.NewRouter(service.RouterDependencies{
-		Logger: log,
+		MaximumMessageSize: config.MaximumMessageSize,
+		Logger:             log,
 		SessionStore: &service.SessionCookieStore{
 			ExpirationTime: time.Hour * 24 * 7,
 			Tokenizer:      tokenizer,
