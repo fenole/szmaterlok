@@ -13,19 +13,19 @@ requirements to call it version `1.0.0`.
 - There can be multiple users using the chat at the same time.
 - Every user will get notification that someone else joined the chat.
 - Every user can lookup list of user currently using the chat.
-- Every user will be notify when someone leave the chat.
+- Every user will be notified when someone leaves the chat.
 - Message cannot be longer than established amount of characters.
 - Chat history will be stored locally in the browser.
-- User is able to logout from the chat and delete the chat history at the same
+- User is able to logout from the chat and deletes the chat history at the same
   time.
 
-In the future, there may be more features if all of the above list are
+In the future, there may be more features if all of the above will be
 implemented.
 
 ## Architectural decisions
 
 Below decisions describe how the system should be implemented in order to
-achieve all the user story points.
+achieve all of the user story points.
 
 - Szmaterlok is client/server web application.
 - User interface will be written with usage of modern web technologies like:
@@ -57,7 +57,7 @@ achieve all the user story points.
   in the event store.
 - Application will be able to restore its state based on events in the event
   store.
-- State of application will be stored in memory, and will be rebuild every time
+- State of application will be stored in memory, and will be rebuilt every time
   application will start.
 - Software configuration will be based on single json config file and single
   environmental variable, which will point to the config file.
