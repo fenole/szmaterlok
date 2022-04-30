@@ -38,7 +38,7 @@ func NewRouter(deps RouterDependencies) *chi.Mux {
 	}))
 	r.Use(middleware.Recoverer)
 
-	r.Get("/", HandlerIndex(web.UI))
+	r.With(SessionLoginGuard(deps.SessionStore, "/chat")).Get("/", HandlerIndex(web.UI))
 	r.Post("/login", HandlerLogin(HandlerLoginDependencies{
 		StateFactory: DefaultSessionStateFactory(),
 		Logger:       deps.Logger,
