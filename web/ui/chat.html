@@ -11,14 +11,17 @@
     <h1 class="dtc v-mid link dim w-25 f3" href="#">
       Szmaterlok
     </h1>
-    <form class="dtc v-mid w-75 tr" action="/logout" method="POST">
+    <div class="dtc v-mid w-75 tr">
       <a class="moon-gray link dim f6 f5-ns dib mr3 mr4-ns" href="https://github.com/fenole/szmaterlok">
         <i class="bi bi-github mr1"></i>Source
       </a>
-      <button class="moon-gray link dim f6 f5-ns dib pointer input-reset bn bg-transparent" type="submit">
+      <button 
+        class="moon-gray link dim f6 f5-ns dib pointer input-reset bn bg-transparent"
+        x-data="{}"
+        @click="$dispatch('logout')">
         <i class="bi bi-box-arrow-right mr1"></i>Logout
       </button>
-    </form>
+    </div>
   </nav>
 </header>
 
@@ -59,7 +62,7 @@
     <section
       class="flex-auto overflow-auto pa2 ba mv2"
       x-data="{
-                messages: [],
+                messages: $persist([]),
                 notifications: [], 
 
                 get stream() {
@@ -70,7 +73,14 @@
                 formatDate(sentAt) {
                   return new Date(sentAt).toLocaleTimeString('en-gb', {});
                 },
+                hasID(id) {
+                  return this.messages.some(b => b.block.some(m => m.id === id));
+                },
                 receive(msg) {
+                  if (this.hasID(msg.id)) {
+                    return;
+                  }
+
                   if (this.messages.length === 0) {
                     this.messages.push({
                       id: msg.id,
@@ -121,7 +131,9 @@
                                scrollDown($nextTick, $refs.chat);"
       @sse:message-sent.document="receive($event.detail.data);
                                   notifyTab($event.detail.data);
-                                  scrollDown($nextTick, $refs.chat);">
+                                  scrollDown($nextTick, $refs.chat);"
+      @logout.window="messages = [];
+                      s8k.api.logout().then(_ => { window.location = '/'; });">
       <template x-for="s in stream" :key="s.id">
         <div>
           <template x-if="s.type === 'message-sent'">

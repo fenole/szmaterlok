@@ -1,5 +1,6 @@
 const eventStreamResource = "/stream";
 const apiMessageResource = "/message";
+const apiLogoutResource = "/logout";
 const apiOnlineUsers = "/users";
 
 const ssePrefix = "sse:";
@@ -54,6 +55,13 @@ document.addEventListener("alpine:init", () => {
         credentials: "include",
       });
       return await res.json();
+    },
+
+    async logout() {
+      return await fetch(apiLogoutResource, {
+        method: "POST",
+        credentials: "include",
+      });
     },
   };
 
