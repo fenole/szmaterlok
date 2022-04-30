@@ -108,6 +108,24 @@ func SessionRequired(cs *SessionCookieStore) func(http.Handler) http.Handler {
 	}
 }
 
+// SessionLoginGuard guards given handler from being accessed with request
+// which contains valid session. If any valid session exists, client is
+// being redirect to given rediretUri.
+func SessionLoginGuard(cs *SessionCookieStore, rediretUri string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, err := cs.SessionState(r)
+			if err == nil {
+				// Valid session state exists, so user should be redirected.
+				http.Redirect(w, r, rediretUri, http.StatusSeeOther)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 type sessionKey string
 
 const sessionStateKey sessionKey = "__session_state"
